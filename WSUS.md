@@ -167,6 +167,18 @@ Get-WsusProduct | where-Object {
 		'Windows Subsystem for Linux')
 }  | Set-WsusProduct
 
+#Set Classification
+Get-WsusClassification | Where-Object {
+    $_.Classification.Title -in (
+		'Critical Updates',
+		'Definition Updates',
+		'Feature Packs',
+		'Security Updates',
+		'Service Packs',
+		'Update Rollups',
+		'Updates')
+} | Set-WsusClassification
+
 #Configure synchronization
 $subscription.SynchronizeAutomatically = $true
 
@@ -192,11 +204,40 @@ $Apply = $rule.ApplyRule()
 
 ```
 
-## Create GPO to force computers to use WSUS over Windows Update
+## Create GPO to force computers to use WSUS instead of Windows Update
 ```posh
-$Params @{
+#Create GPO
+$Params = @{
     Name    = "WSUS"
     Comment = "Group policy settings for WSUS"  
 }
 New-GPO @Params
+
+#Link to workstations OU
+$Params = @{
+	Name    = "WSUS"
+	Target	= "OU=Workstations,OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
+}
+new-gplink @Params
+
+
+#DWORD's and Strings cannot be set together, so two commands are needed.
+#Set registry entries to point to WSUS server
+$Params = @{
+    Name      = "WSUS"
+    Key       = "HKLM\Software\Policies\Microsoft\Windows\WindowsUpdate"
+    Type      = "String"
+    ValueName = "WUServer","WUStatusServer","UpdateServiceUrlAlternate"
+    Value     = "http://wsus.ad.contoso.com:8530","http://wsus.ad.contoso.com:8530","http://wsus.ad.contoso.com:8530"
+}
+set-GPRegistryValue @Params
+
+$Params = @{
+    Name      = "WSUS"
+    Key       = "HKLM\Software\Policies\Microsoft\Windows\WindowsUpdate\AU"
+    Type      = "DWORD"
+    ValueName = "UseWUServer"
+    Value     = 1
+}
+set-GPRegistryValue @Params
 ```
