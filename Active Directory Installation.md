@@ -4,7 +4,7 @@
 $VMName = "DC1"
 $Params = @{
 	Name				=	$VMName
-	MemoryStartupBytes	=	1GB
+	MemoryStartupBytes		=	1GB
 	Path				=	"E:\VM\$VMName"
 	Generation			=	2
 	SwitchName			=	"NATSwitch"
@@ -13,7 +13,7 @@ New-VM @Params
 
 #Edit VM
 $Params = @{
-	Name				=	$VMName
+	Name			=	$VMName
 	ProcessorCount		=	4
 	DynamicMemory		=	$true
 	MemoryMinimumBytes	=	1GB
@@ -26,7 +26,7 @@ $Params = @{
 	VMName			=	$VMName
 	Count			=	8
 	Maximum			=	100
-	RelativeWeight	=	100
+	RelativeWeight		=	100
 }
 Set-VMProcessor @Params
 
