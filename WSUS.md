@@ -220,7 +220,6 @@ $Params = @{
 }
 new-gplink @Params
 
-
 #DWORD's and Strings cannot be set together, so two commands are needed.
 #Set registry entries to point to WSUS server
 $Params = @{
