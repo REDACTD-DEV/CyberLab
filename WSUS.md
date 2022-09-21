@@ -1,7 +1,7 @@
 ## Deploy the VM
 ```posh
 #Create VM
-$VMName = "WSUS-Test"
+$VMName = "WSUS"
 $Params = @{
 	Name				=	$VMName
 	MemoryStartupBytes	=	1GB
