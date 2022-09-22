@@ -121,7 +121,7 @@ New-ADOrganizationalUnit “DistributionLists” –path “OU=Groups,OU=Contoso
 #New admin user
 $Params = @{
     Name                  = "Admin-John.Smith"
-    AccountPassword       = (Read-Host -AsSecureString "Enter Password:")
+    AccountPassword       = (Read-Host -AsSecureString "Enter Password")
     Enabled               = $true
     ChangePasswordAtLogon = $true
     DisplayName           = "John Smith - Admin"
@@ -134,7 +134,7 @@ Add-ADGroupMember -Identity "Domain Admins" -Members "Admin-John.Smith"
 #New domain user
 $Params = @{
     Name                  = "John.Smith"
-    AccountPassword       = (Read-Host -AsSecureString "Enter Password:")
+    AccountPassword       = (Read-Host -AsSecureString "Enter Password")
     Enabled               = $true
     ChangePasswordAtLogon = $true
     DisplayName           = "John Smith"
@@ -147,7 +147,7 @@ New-ADUser @Params
 Add-ADGroupMember -Identity "Remote Desktop Users" -Members "John.Smith"
 
 #Add Company SGs and add members to it
-New-ADGroup -Name "All-Staff" -SamAccountName "All-Staff" -GroupCategory Security -GroupScope Global -DisplayName "All-Staff" -Path "CN=SecurityGroups,OU=Groups,OU=Contoso,DC=ad,DC=contoso,DC=com" -Description "Members of this group are employees of Contoso"
+New-ADGroup -Name "All-Staff" -SamAccountName "All-Staff" -GroupCategory Security -GroupScope Global -DisplayName "All-Staff" -Path "OU=SecurityGroups,OU=Groups,OU=Contoso,DC=ad,DC=contoso,DC=com" -Description "Members of this group are employees of Contoso"
 Add-ADGroupMember -Identity "All-Staff" -Members "John.Smith"
 
 ```
