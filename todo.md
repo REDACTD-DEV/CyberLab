@@ -4,4 +4,8 @@
  - [x] create script for WSUS GPO
  - [ ] computer groups within WSUS
  - [x] hyper-v vm deployment scripts for each machine
+ - [ ] File server
+ - [ ] MDT
+ - [ ] WDS
+ - [ ] Exchange
  
