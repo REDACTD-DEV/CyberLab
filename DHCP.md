@@ -60,12 +60,6 @@ Start-VM -Name $VMName
 
 ## Inital configuration on all servers
 ```posh
-#Rename the server
-Rename-Computer -NewName DHCP
-
-#Restart the server
-Restart-Computer -Force
-
 #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
 $Params = @{
   IPAddress         = "192.168.10.12"
@@ -88,6 +82,7 @@ $Params = @{
 	DomainName	=	"ad.contoso.com"
 	OUPath		=	"OU=Servers,OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
 	Credential	=	"ad.contoso.com\Administrator"
+	NewName		=	"DHCP"
 	Force		=	$true
 	Restart		=	$true
 }
@@ -104,7 +99,7 @@ netsh dhcp add securitygroups
 Restart-Service dhcpserver
 
 #Authorize DHCP Server in AD
-Add-DhcpServerInDC -DnsName ad.contoso.com
+Add-DhcpServerInDC -DnsName dhcp.ad.contoso.com
 
 #Notify Server Manager that DCHP installation is complete, since it doesn't do this automatically
 $Params = @{
@@ -121,7 +116,7 @@ Add-DhcpServerv4Scope -name "Corpnet" -StartRange 192.168.10.50 -EndRange 192.16
 Add-DhcpServerv4ExclusionRange -ScopeID 192.168.10.0 -StartRange 192.168.10.1 -EndRange 192.168.10.49
 
 #Specify default gateway 
-Set-DhcpServerv4OptionValue -OptionID 3 -Value 192.168.10.1 -ScopeID 192.168.10.0 -ComputerName DC1.ad.contoso.com
+Set-DhcpServerv4OptionValue -OptionID 3 -Value 192.168.10.1 -ScopeID 192.168.10.0 -ComputerName dhcp.ad.contoso.com
 
 #Specify default DNS server
 Set-DhcpServerv4OptionValue -DnsDomain ad.contoso.com -DnsServer 192.168.10.10
