@@ -139,6 +139,7 @@ $wsusConfig.Save()
 
 
 # Get WSUS Subscription and perform initial synchronization to get latest categories
+$wsus = Get-WsusServer
 $subscription = $wsus.GetSubscription()
 $subscription.StartSynchronizationForCategoryOnly()
 
