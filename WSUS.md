@@ -118,7 +118,7 @@ Initialize-Disk -Number 1
 #Partition and format
 New-Partition -DiskNumber 1 -UseMaximumSize | Format-Volume -FileSystem "NTFS" -NewFileSystemLabel "Data"
 #Set drive letter 
-Set-Partition -DiskNumber 1 -PartionNumver 2 -NewDriveLetter E
+Set-Partition -DiskNumber 1 -PartitionNumber 2 -NewDriveLetter E
 ```
 
 ## Install WSUS
