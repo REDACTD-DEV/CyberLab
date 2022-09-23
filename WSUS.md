@@ -150,24 +150,9 @@ Get-WsusProduct | Set-WsusProduct -Disable
 Get-WsusProduct | where-Object {
 	$_.Product.Title -in (
 		'Microsoft Defender Antivirus',
-		'Microsoft Defender for Endpoint',
-		'Microsoft Edge',
-		'Microsoft Online Services Sign-In Assistant',
-		'Microsoft Online Services',
-		'Office 2016',
-		'PowerShell',
-		'Visual Studio 2022',
-		'Windows - Client, version 21H2 and later, Servicing Drivers',
-		'Windows - Client, version 21H2 and later, Upgrade & Servicing Drivers',
-		'Windows - Server, version 21H2 and later, Servicing Drivers',
-		'Windows - Server, version 21H2 and later, Upgrade & Servicing Drivers',
-		'Windows 11',
-		'Windows Admin Center',
-		'Windows Server 2019',
-		'Windows Server Drivers',
-		'Windows Server Manager – Windows Server Update Services (WSUS) Dynamic Installer',
-		'Windows Server, version 1903 and later',
-		'Windows Subsystem for Linux')
+		'Windows 10 Feature On Demand',
+		'Windows 10, version 1903 and later',
+		'Windows Server 2019')
 }  | Set-WsusProduct
 
 #Set Classification
