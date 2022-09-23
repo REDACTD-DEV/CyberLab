@@ -97,6 +97,7 @@ $Params = @{
   InterfaceIndex    = (Get-NetAdapter).InterfaceIndex
 }
 Set-DNSClientServerAddress @Params
+```
 
 ## Join server to an existing domain
 ```posh
