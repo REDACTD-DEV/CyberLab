@@ -1,97 +1,21 @@
-## Deploy the VM
-```posh
-#Create VM
-$VMName = "FS01"
-$Params = @{
-	Name				=	$VMName
-	MemoryStartupBytes	=	1GB
-	Path				=	"E:\VM\$VMName"
-	Generation			=	2
-	SwitchName			=	"NATSwitch"
-}
-New-VM @Params
-
-#Edit VM
-$Params = @{
-	Name				=	$VMName
-	ProcessorCount		=	4
-	DynamicMemory		=	$true
-	MemoryMinimumBytes	=	1GB
-	MemoryMaximumBytes	=	4GB
-}
-Set-VM @Params
-
-#Specify CPU settings
-$Params = @{
-	VMName			=	$VMName
-	Count			=	8
-	Maximum			=	100
-	RelativeWeight	=	100
-}
-Set-VMProcessor @Params
-
-#Add Installer ISO
-$Params = @{
-	VMName	=	$VMName
-	Path	=	"E:\ISO\WINSERVER.ISO"
-}
-Add-VMDvdDrive @Params
-
-#Create OS Drive
-$Params = @{
-	Path		=	"E:\VHD\$VMName-OS.vhdx"
-	SizeBytes	=	60GB
-	Dynamic		=	$true
-}
-New-VHD @Params
-
-#Create Data Drive
-$Params = @{
-	Path		=	"E:\VHD\$VMName-Data.vhdx"
-	SizeBytes	=	500GB
-	Dynamic		=	$true
-}
-New-VHD @Params
-
-#Add OS Drive to VM
-$Params = @{
-	VMName	=	$VMName
-	Path	=	"E:\VHD\$VMName-OS.vhdx"
-}
-Add-VMHardDiskDrive @Params
-
-#Add Data Drive to VM
-$Params = @{
-	VMName	=	$VMName
-	Path	=	"E:\VHD\$VMName-Data.vhdx"
-}
-Add-VMHardDiskDrive @Params
-
-#Set boot priority
-Set-VMFirmware -VMName $VMName -BootOrder $(Get-VMDvdDrive -VMName $VMName), $(Get-VMHardDiskDrive -VMName $VMName | where Path -match "OS"), $(Get-VMHardDiskDrive -VMName $VMName | where Path -match "Data")
-
-Start-VM -Name $VMName
-``` 
-
-
-## Initial Server Configuration
+## Initial Configuration
 ```posh
 #Rename the server
 Rename-Computer -NewName FS01
 
 #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
 $Params = @{
-  IPAddress         = "192.168.10.13"
-  DefaultGateway    = "192.168.10.1"
-  PrefixLength      = "24"
-  InterfaceIndex    = (Get-NetAdapter).InterfaceIndex
+  IPAddress = "192.168.10.13"
+  DefaultGateway = "192.168.10.1"
+  PrefixLength = "24"
+  InterfaceIndex = (Get-NetAdapter).InterfaceIndex
 }
 New-NetIPAddress @Params
 
 #Configure DNS Settings
 $Params = @{
-  ServerAddresses   = "192.168.10.10"
-  InterfaceIndex    = (Get-NetAdapter).InterfaceIndex
+  ServerAddresses = "192.168.10.10"
+  InterfaceIndex = (Get-NetAdapter).InterfaceIndex
 }
 Set-DNSClientServerAddress @Params
 ```
@@ -99,11 +23,11 @@ Set-DNSClientServerAddress @Params
 ## Join server to an existing domain
 ```posh
 $Params = @{
-	DomainName	=	"ad.contoso.com"
-	OUPath		=	"OU=Servers,OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
-	Credential	=	"ad.contoso.com\Administrator"
-	Force		=	$true
-	Restart		=	$true
+	DomainName = "ad.contoso.com"
+	OUPath = "OU=Servers,OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
+	Credential = "ad.contoso.com\Administrator"
+	Force =	$true
+	Restart = $true
 }
 Add-Computer @Params
 ```
@@ -129,10 +53,10 @@ Install-WindowsFeature FS-FileServer
 New-Item "E:\Data\NetworkShare" -Type Directory
 
 $Params = @{
-    Name                  = "NetworkShare"
-    Path                  = "E:\Data\NetworkShare"
-    FullAccess            = "Domain Admins"
-    ReadAccess            = "Domain Users"
+    Name = "NetworkShare"
+    Path = "E:\Data\NetworkShare"
+    FullAccess = "Domain Admins"
+    ReadAccess = "Domain Users"
     FolderEnumerationMode = "Unrestricted"
 }
 New-SmbShare @Params
@@ -160,21 +84,21 @@ $path="\\ad.contoso.com\SYSVOL\ad.contoso.com\Policies\{$guid}\User\Preferences\
 New-Item -Path $path -type Directory | Out-Null
 
 #Variables that would normally be set in the Drive Mapping dialog box
-$Letter     = "M"
-$Label      = "NetworkShare"
-$SharePath  = "\\ad.contoso.com\NetworkShare"
-$ILT        = "AD\All-Staff"
-$SID        = (Get-ADGroup "All-Staff").SID.Value
+$Letter = "M"
+$Label = "NetworkShare"
+$SharePath = "\\ad.contoso.com\NetworkShare"
+$ILT = "AD\All-Staff"
+$SID = (Get-ADGroup "All-Staff").SID.Value
 
 #Date needs to be inserted into the XML
-$Date       = Get-Date -Format "yyyy-MM-dd hh:mm:ss"
+$Date = Get-Date -Format "yyyy-MM-dd hh:mm:ss"
 
 #A Guid needs to be inserted into the XML - This can be completely random 
 $RandomGuid = New-Guid
 $RandomGuid = $RandomGuid.Guid.ToUpper()
 
 #The XML
-$data       = @"
+$data = @"
 <?xml version="1.0" encoding="utf-8"?>
 <Drives clsid="{8FDDCC1A-0C3C-43cd-A6B4-71A6DF20DA8C}">
 	<Drive clsid="{935D1B74-9CB8-4e3c-9914-7DD559B7A417}" bypassErrors="1" uid="{$RandomGuid}" changed="$Date" image="2" status="${Letter}:" name="${Letter}:">
@@ -196,11 +120,11 @@ Set-ADObject -Identity "CN={$guid},CN=Policies,CN=System,DC=ad,DC=contoso,DC=com
 #Edit something random (and easy) so it increments the versionNumber properly
 #This one removes the computer icon from the desktop.
 $Params = @{
-    Name      = "All Staff Mapped Drive"
-    Key       = "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\NonEnum"
-    Type      = "DWORD"
+    Name = "All Staff Mapped Drive"
+    Key = "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\NonEnum"
+    Type = "DWORD"
     ValueName = "{645FF040-5081-101B-9F08-00AA002F954E}"
-    Value     = 1
+    Value = 1
 }
 set-GPRegistryValue @Params
 ```
