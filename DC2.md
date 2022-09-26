@@ -46,3 +46,8 @@ Import-VM @Params
 Get-VM DC1 | Where State -eq "Off" | Rename-VM -NewName DC2
 Start-VM -Name "DC2"
 ```
+
+## Cleanup on DC1
+```posh
+Remove-ADGroupMember -Identity "Cloneable Domain Controllers" -Members "CN=DC1,OU=Domain Controllers,DC=ad,DC=contoso,DC=com"
+```
