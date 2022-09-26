@@ -20,42 +20,42 @@ Foreach ($VMName in $VMNames) {
 
     #Edit VM
     $Params = @{
-        Name		    	=	$VMName
-        ProcessorCount		=	4
-        DynamicMemory		=	$true
-        MemoryMinimumBytes	=	1GB
-        MemoryMaximumBytes	=	4GB
+        Name = $VMName
+        ProcessorCount = 4
+        DynamicMemory = $true
+        MemoryMinimumBytes = 1GB
+        MemoryMaximumBytes = 4GB
     }
     Set-VM @Params
 
     #Specify CPU settings
     $Params = @{
-        VMName			=	$VMName
-        Count			=	8
-        Maximum			=	100
-        RelativeWeight	=	100
+        VMName = $VMName
+        Count = 8
+        Maximum = 100
+        RelativeWeight = 100
     }
     Set-VMProcessor @Params
 
     #Add Installer ISO
     $Params = @{
-        VMName	=	$VMName
-        Path	=	"E:\ISO\WINSERVER.ISO"
+        VMName = $VMName
+        Path = "E:\ISO\WINSERVER.ISO"
     }
     Add-VMDvdDrive @Params
 
     #Create OS Drive
     $Params = @{
-        Path		=	"E:\VHD\$VMName-OS.vhdx"
-        SizeBytes	=	60GB
-        Dynamic		=	$true
+        Path = "E:\VHD\$VMName-OS.vhdx"
+        SizeBytes = 60GB
+        Dynamic = $true
     }
     New-VHD @Params
 
     #Add OS Drive to VM
     $Params = @{
-        VMName	=	$VMName
-        Path	=	"E:\VHD\$VMName-OS.vhdx"
+        VMName = $VMName
+        Path = "E:\VHD\$VMName-OS.vhdx"
     }
     Add-VMHardDiskDrive @Params
 
@@ -71,67 +71,67 @@ $VMNames = @(‘FS01’,’WSUS’)
 Foreach ($VMName in $VMNames) {
     $VMName = "FS01"
     $Params = @{
-        Name				=	$VMName
-        MemoryStartupBytes	=	1GB
-        Path				=	"E:\VM\$VMName"
-        Generation			=	2
-        SwitchName			=	"NATSwitch"
+        Name = $VMName
+        MemoryStartupBytes = 1GB
+        Path = "E:\VM\$VMName"
+        Generation = 2
+        SwitchName = "NATSwitch"
     }
     New-VM @Params
 
     #Edit VM
     $Params = @{
-        Name				=	$VMName
-        ProcessorCount		=	4
-        DynamicMemory		=	$true
-        MemoryMinimumBytes	=	1GB
-        MemoryMaximumBytes	=	4GB
+        Name = $VMName
+        ProcessorCount = 4
+        DynamicMemory = $true
+        MemoryMinimumBytes = 1GB
+        MemoryMaximumBytes = 4GB
     }
     Set-VM @Params
 
     #Specify CPU settings
     $Params = @{
-        VMName			=	$VMName
-        Count			=	8
-        Maximum			=	100
-        RelativeWeight	=	100
+        VMName = $VMName
+        Count = 8
+        Maximum = 100
+        RelativeWeight = 100
     }
     Set-VMProcessor @Params
 
     #Add Installer ISO
     $Params = @{
-        VMName	=	$VMName
-        Path	=	"E:\ISO\WINSERVER.ISO"
+        VMName = $VMName
+        Path = "E:\ISO\WINSERVER.ISO"
     }
     Add-VMDvdDrive @Params
 
     #Create OS Drive
     $Params = @{
-        Path		=	"E:\VHD\$VMName-OS.vhdx"
-        SizeBytes	=	60GB
-        Dynamic		=	$true
+        Path = "E:\VHD\$VMName-OS.vhdx"
+        SizeBytes = 60GB
+        Dynamic = $true
     }
     New-VHD @Params
 
     #Create Data Drive
     $Params = @{
-        Path		=	"E:\VHD\$VMName-Data.vhdx"
-        SizeBytes	=	500GB
-        Dynamic		=	$true
+        Path = "E:\VHD\$VMName-Data.vhdx"
+        SizeBytes = 500GB
+        Dynamic = $true
     }
     New-VHD @Params
 
     #Add OS Drive to VM
     $Params = @{
-        VMName	=	$VMName
-        Path	=	"E:\VHD\$VMName-OS.vhdx"
+        VMName = $VMName
+        Path = "E:\VHD\$VMName-OS.vhdx"
     }
     Add-VMHardDiskDrive @Params
 
     #Add Data Drive to VM
     $Params = @{
-        VMName	=	$VMName
-        Path	=	"E:\VHD\$VMName-Data.vhdx"
+        VMName = $VMName
+        Path = "E:\VHD\$VMName-Data.vhdx"
     }
     Add-VMHardDiskDrive @Params
 
