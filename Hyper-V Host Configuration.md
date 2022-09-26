@@ -7,7 +7,7 @@ New-NetNAT -Name "NATNetwork" -InternalIPInterfaceAddressPrefix 192.168.10.0/24
 
 ## Deploy VMs that require 1 disk
 ```posh
-$VMNames = @(‘FS01’,’WSUS’)
+$VMNames = @(‘DC1’,’DHCP’,’WinClient’)
 Foreach ($VMName in $VMNames) {
 #Create VM
     $Params = @{
@@ -67,10 +67,9 @@ Foreach ($VMName in $VMNames) {
 }
 ```
 ## Deploy VMs that require two disks
-## Deploy the VM
 ```posh
 #Create VM
-$VMNames = @(‘DC1’,’DHCP’,’WinClient’)
+$VMNames = @(‘FS01’,’WSUS’)
 Foreach ($VMName in $VMNames) {
     $VMName = "FS01"
     $Params = @{
