@@ -10,11 +10,11 @@ New-NetNAT -Name "NATNetwork" -InternalIPInterfaceAddressPrefix 192.168.10.0/24
 $VMNames = @(‘DC1’,’DHCP’,’WinClient’)
 Foreach ($VMName in $VMNames) {
     $Params = @{
-        Name				=	$VMName
-        MemoryStartupBytes  =	1GB
-        Path				=	"E:\VM\$VMName"
-        Generation			=	2
-        SwitchName			=	"NATSwitch"
+        Name = $VMName
+        MemoryStartupBytes = 1GB
+        Path = "E:\VM\$VMName"
+        Generation = 2
+        SwitchName = "NATSwitch"
     }
     New-VM @Params
 
