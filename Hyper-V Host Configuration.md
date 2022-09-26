@@ -11,7 +11,7 @@ $VMNames = @(‘DC1’,’DHCP’,’WinClient’)
 Foreach ($VMName in $VMNames) {
     $Params = @{
         Name				=	$VMName
-        MemoryStartupBytes		=	1GB
+        MemoryStartupBytes	=	1GB
         Path				=	"E:\VM\$VMName"
         Generation			=	2
         SwitchName			=	"NATSwitch"
@@ -20,7 +20,7 @@ Foreach ($VMName in $VMNames) {
 
     #Edit VM
     $Params = @{
-        Name			=	$VMName
+        Name		    	=	$VMName
         ProcessorCount		=	4
         DynamicMemory		=	$true
         MemoryMinimumBytes	=	1GB
@@ -33,7 +33,7 @@ Foreach ($VMName in $VMNames) {
         VMName			=	$VMName
         Count			=	8
         Maximum			=	100
-        RelativeWeight		=	100
+        RelativeWeight	=	100
     }
     Set-VMProcessor @Params
 
