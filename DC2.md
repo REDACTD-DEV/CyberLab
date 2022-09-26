@@ -34,7 +34,7 @@ Remove-Item -Path "E:\Export"
 Start-VM -Name "DC1"
 $guid = (Get-VM "DC1").vmid.guid.ToUpper()
 $Params = @{
-    Path                =   "E:\DC2\$guid.vmcx"
+    Path                =   "E:\DC2\Vitrual Machines\$guid.xml"
     VirtualMachinePath  =   "E:\DC2"
     VhdDestinationPath  =   "E:\DC2"
     SnapshotFilePath    =   "E:\DC2"
