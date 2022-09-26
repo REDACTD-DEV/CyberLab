@@ -24,17 +24,15 @@ Stop-Computer
 ## Export VM
 ```posh
 Export-VM -Name "DC1" -Path E:\Export
-Rename-Item -Path "E:\Export\DC1" -NewName "DC2"
-Move-Item -Path "E:\Export\DC2" -Destination "E:\"
-Remove-Item -Path "E:\Export"
 ```
 
 ## Import VM
 ```posh
 Start-VM -Name "DC1"
 $guid = (Get-VM "DC1").vmid.guid.ToUpper()
+New-Item -Type Directory -Path "E:\DC2"
 $Params = @{
-    Path                =   "E:\DC2\Virtual Machines\$guid.xml"
+    Path                =   "E:\Export\DC1\Virtual Machines\$guid.vmcx"
     VirtualMachinePath  =   "E:\DC2"
     VhdDestinationPath  =   "E:\DC2"
     SnapshotFilePath    =   "E:\DC2"
@@ -45,9 +43,10 @@ $Params = @{
 Import-VM @Params
 Get-VM DC1 | Where State -eq "Off" | Rename-VM -NewName DC2
 Start-VM -Name "DC2"
+Remove-Item -Recurse E:\Export\
 ```
 
 ## Cleanup on DC1
 ```posh
-Remove-ADGroupMember -Identity "Cloneable Domain Controllers" -Members "CN=DC1,OU=Domain Controllers,DC=ad,DC=contoso,DC=com"
+Remove-ADGroupMember -Identity "Cloneable Domain Controllers" -Members "CN=DC1,OU=Domain Controllers,DC=ad,DC=contoso,DC=com","CN=DC2,OU=Domain Controllers,DC=ad,DC=contoso,DC=com"
 ```
