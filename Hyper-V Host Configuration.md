@@ -11,7 +11,7 @@ $VMNames = @(‘DC1’,’DHCP’,’WinClient’)
 Foreach ($VMName in $VMNames) {
     $Params = @{
         Name				=	$VMName
-        MemoryStartupBytes	=	1GB
+        MemoryStartupBytes  =	1GB
         Path				=	"E:\VM\$VMName"
         Generation			=	2
         SwitchName			=	"NATSwitch"
