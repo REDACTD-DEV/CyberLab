@@ -1,7 +1,7 @@
 ## Prepare DC1 to be cloned
 ```posh
 #Add to Cloneable Domain Controllers
-Add-ADGroupMember -Identity "Cloneable Domain Controllers" -Members "CN=DC1,OU=Domain Contrllers,DC=ad,DC=contoso,DC=com"
+Add-ADGroupMember -Identity "Cloneable Domain Controllers" -Members "CN=DC1,OU=Domain Controllers,DC=ad,DC=contoso,DC=com"
 
 #List of applications that won't be cloned
 Get-ADDCCloningExcludedApplicationList -GenerateXML
