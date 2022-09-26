@@ -94,8 +94,7 @@ $SID = (Get-ADGroup "All-Staff").SID.Value
 $Date = Get-Date -Format "yyyy-MM-dd hh:mm:ss"
 
 #A Guid needs to be inserted into the XML - This can be completely random 
-$RandomGuid = New-Guid
-$RandomGuid = $RandomGuid.Guid.ToUpper()
+$RandomGuid = (New-Guid).Guid.ToUpper()
 
 #The XML
 $data = @"
