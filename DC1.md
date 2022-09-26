@@ -1,64 +1,4 @@
-## Deploy the VM
-```posh
-#Create VM
-$VMName = "DC1"
-$Params = @{
-	Name				=	$VMName
-	MemoryStartupBytes		=	1GB
-	Path				=	"E:\VM\$VMName"
-	Generation			=	2
-	SwitchName			=	"NATSwitch"
-}
-New-VM @Params
-
-#Edit VM
-$Params = @{
-	Name			=	$VMName
-	ProcessorCount		=	4
-	DynamicMemory		=	$true
-	MemoryMinimumBytes	=	1GB
-	MemoryMaximumBytes	=	4GB
-}
-Set-VM @Params
-
-#Specify CPU settings
-$Params = @{
-	VMName			=	$VMName
-	Count			=	8
-	Maximum			=	100
-	RelativeWeight		=	100
-}
-Set-VMProcessor @Params
-
-#Add Installer ISO
-$Params = @{
-	VMName	=	$VMName
-	Path	=	"E:\ISO\WINSERVER.ISO"
-}
-Add-VMDvdDrive @Params
-
-#Create OS Drive
-$Params = @{
-	Path		=	"E:\VHD\$VMName-OS.vhdx"
-	SizeBytes	=	60GB
-	Dynamic		=	$true
-}
-New-VHD @Params
-
-#Add OS Drive to VM
-$Params = @{
-	VMName	=	$VMName
-	Path	=	"E:\VHD\$VMName-OS.vhdx"
-}
-Add-VMHardDiskDrive @Params
-
-#Set boot priority
-Set-VMFirmware -VMName $VMName -BootOrder $(Get-VMDvdDrive -VMName $VMName), $(Get-VMHardDiskDrive -VMName $VMName | where Path -match "OS")
-
-Start-VM -Name $VMName
-``` 
-
-## Inital configuration on all servers
+## Inital configuration
 ```posh
 #Rename the server
 Rename-Computer -NewName DC1
@@ -68,17 +8,17 @@ Restart-Computer -Force
 
 #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
 $Params = @{
-  IPAddress         = "192.168.10.10"
-  DefaultGateway    = "192.168.10.1"
-  PrefixLength      = "24"
-  InterfaceIndex    = (Get-NetAdapter).InterfaceIndex
+  IPAddress = "192.168.10.10"
+  DefaultGateway = "192.168.10.1"
+  PrefixLength = "24"
+  InterfaceIndex = (Get-NetAdapter).InterfaceIndex
 }
 New-NetIPAddress @Params
 
 #Configure DNS Settings
 $Params = @{
-  ServerAddresses   = "192.168.10.10"
-  InterfaceIndex    = (Get-NetAdapter).InterfaceIndex
+  ServerAddresses = "192.168.10.10"
+  InterfaceIndex = (Get-NetAdapter).InterfaceIndex
 }
 Set-DNSClientServerAddress @Params
 ```
@@ -120,12 +60,12 @@ New-ADOrganizationalUnit “DistributionLists” –path “OU=Groups,OU=Contoso
 ```posh
 #New admin user
 $Params = @{
-    Name                  = "Admin-John.Smith"
-    AccountPassword       = (Read-Host -AsSecureString "Enter Password")
-    Enabled               = $true
+    Name = "Admin-John.Smith"
+    AccountPassword = (Read-Host -AsSecureString "Enter Password")
+    Enabled = $true
     ChangePasswordAtLogon = $true
-    DisplayName           = "John Smith - Admin"
-    Path                  = “OU=Admins,OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com”
+    DisplayName = "John Smith - Admin"
+    Path = “OU=Admins,OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com”
 }
 New-ADUser @Params
 #Add admin to Domain Admins group
@@ -133,14 +73,14 @@ Add-ADGroupMember -Identity "Domain Admins" -Members "Admin-John.Smith"
 
 #New domain user
 $Params = @{
-    Name                  = "John.Smith"
-    AccountPassword       = (Read-Host -AsSecureString "Enter Password")
-    Enabled               = $true
+    Name = "John.Smith"
+    AccountPassword = (Read-Host -AsSecureString "Enter Password")
+    Enabled = $true
     ChangePasswordAtLogon = $true
-    DisplayName           = "John Smith"
-    Company               = "Contoso"
-    Department            = "Information Technology"
-    Path                  = “OU=Employees,OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com”
+    DisplayName = "John Smith"
+    Company = "Contoso"
+    Department = "Information Technology"
+    Path = “OU=Employees,OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com”
 }
 New-ADUser @Params
 #Will have issues logging in through Hyper-V Enhanced Session Mode if not in this group
