@@ -12,7 +12,7 @@ Foreach ($VMName in $VMNames) {
     $Params = @{
         Name = $VMName
         MemoryStartupBytes = 1GB
-        Path = "E:\VM\$VMName"
+        Path = "E:\$VMName"
         Generation = 2
         SwitchName = "NATSwitch"
     }
@@ -42,11 +42,13 @@ Foreach ($VMName in $VMNames) {
         VMName = $VMName
         Path = "E:\ISO\WINSERVER.ISO"
     }
+    if($VMName -eq "WinClient") {$Params['Path'] = "E:\ISO\Windows.iso"}
+    if($VMName -eq "pfSense") {$Params['Path'] = "E:\ISO\pfSense.iso"}
     Add-VMDvdDrive @Params
 
     #Create OS Drive
     $Params = @{
-        Path = "E:\VHD\$VMName-OS.vhdx"
+        Path = "E:\$VMName\Virtual Hard Disks\$VMName-OS.vhdx"
         SizeBytes = 60GB
         Dynamic = $true
     }
@@ -54,7 +56,7 @@ Foreach ($VMName in $VMNames) {
 
     #Create Data Drive
     $Params = @{
-        Path = "E:\VHD\$VMName-Data.vhdx"
+        Path = "E:\$VMName\Virtual Hard Disks\$VMName-Data.vhdx"
         SizeBytes = 500GB
         Dynamic = $true
     }
@@ -63,14 +65,14 @@ Foreach ($VMName in $VMNames) {
     #Add OS Drive to VM
     $Params = @{
         VMName = $VMName
-        Path = "E:\VHD\$VMName-OS.vhdx"
+        Path = "E:\$VMName\Virtual Hard Disks\$VMName-OS.vhdx"
     }
     Add-VMHardDiskDrive @Params
 
     #Add Data Drive to VM
     $Params = @{
         VMName = $VMName
-        Path = "E:\VHD\$VMName-Data.vhdx"
+        Path = "E:\$VMName\Virtual Hard Disks\$VMName-Data.vhdx"
     }
     Add-VMHardDiskDrive @Params
 
