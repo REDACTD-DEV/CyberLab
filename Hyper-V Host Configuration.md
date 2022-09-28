@@ -14,7 +14,7 @@ Foreach ($VMName in $VMNames) {
         MemoryStartupBytes = 1GB
         Path = "E:\$VMName"
         Generation = 2
-        SwitchName = "NATSwitch"
+        SwitchName = "Private Virtual Switch"
     }
     New-VM @Params
 
