@@ -8,12 +8,13 @@ Mount-DiskImage -ImagePath "E:\ISO\WINSERVER-22.iso"
 #Copy ISO
 $Path = (Get-DiskImage -ImagePath "E:\ISO\WINSERVER-22.iso" | Get-Volume).DriveLetter + ":\"
 New-Item -Type Directory -Path "E:\ISOBuild"
-Copy-Item -Path $Path -Destination "E:\ISOBuild"
+Copy-Item -Path $Path* -Destination "E:\ISOBuild" -Recurse
 
 #Create ISO
 New-ISOFile -source "E:\ISOBuild" -destinationISO "E:\ISO\WINSERVER-22-Auto.iso" -bootfile "E:\ISOBuild\efi\microsoft\boot\efisys_noprompt.bin" -title "WINSERVER-22-Auto" -Verbose
 
 #Cleanup
+Dismount-DiskImage -ImagePath "E:\ISO\WINSERVER-22.iso"
 Remove-Item -Recurse -Path "E:\ISOBuild"
 
 #Create folder for autounattend ISO
@@ -160,11 +161,11 @@ $data = @"
 </unattend>
 "@
 #Write XML
-$data | out-file "E:\autounattend" -Encoding "utf8"
+$data | out-file "E:\autounattend\autounattend.xml" -Encoding "utf8"
 
 
 ## Deploy VMs
-$VMNames = @("FS01","WSUS","DC01","DHCP","WinClient")
+$VMNames = @("FS01","WSUS","DC01","DHCP","CL01")
 Foreach ($VMName in $VMNames) {
 
     #Create New VM
@@ -201,7 +202,7 @@ Foreach ($VMName in $VMNames) {
         VMName = $VMName
         Path = "E:\ISO\WINSERVER-22-Auto.iso"
     }
-    if($VMName -eq "WinClient") {$Params['Path'] = "E:\ISO\Windows.iso"}
+    if($VMName -eq "CL01") {$Params['Path'] = "E:\ISO\Windows.iso"}
     if($VMName -eq "pfSense") {$Params['Path'] = "E:\ISO\pfSense.iso"}
     Add-VMDvdDrive @Params
 
@@ -227,7 +228,7 @@ Foreach ($VMName in $VMNames) {
     #Create OS Drive
     $Params = @{
         Path = "E:\$VMName\Virtual Hard Disks\$VMName-OS.vhdx"
-        SizeBytes = "60GB"
+        SizeBytes = 60GB
         Dynamic = $true
     }
     New-VHD @Params
@@ -235,7 +236,7 @@ Foreach ($VMName in $VMNames) {
     #Create Data Drive
     $Params = @{
         Path = "E:\$VMName\Virtual Hard Disks\$VMName-Data.vhdx"
-        SizeBytes = "500GB"
+        SizeBytes = 500GB
         Dynamic = $true
     }
     New-VHD @Params
