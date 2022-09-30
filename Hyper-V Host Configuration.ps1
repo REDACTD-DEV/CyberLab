@@ -291,7 +291,7 @@ New-ISOFile -source "E:\ISOBuild" -destinationISO "E:\ISO\WINSERVER-22-Auto.iso"
 
 #Cleanup
 Dismount-DiskImage -ImagePath "E:\ISO\WINSERVER-22.iso"
-Remove-Item -Recurse -Path "E:\ISOBuild"
+#Remove-Item -Recurse -Path "E:\ISOBuild"
 
 #Create folder for autounattend ISO
 New-Item -Type Directory -Path "E:\autounattend"
@@ -441,14 +441,20 @@ $data | out-file "E:\autounattend\autounattend.xml" -Encoding "utf8"
 
 
 ## Deploy VMs
-$VMNames = @("FS01","WSUS","DC01","DHCP","CL01")
+$VMNames = @(
+    [PSCustomObject]@{Name = "DC01"; IP = "192.168.10.10"; Script = "DC01.ps1"}
+    [PSCustomObject]@{Name = "DHCP"; IP = "192.168.10.12"; Script = "DHCP.ps1"}
+    [PSCustomObject]@{Name = "FS01"; IP = "192.168.10.13"; Script = "FS01.ps1"}
+    [PSCustomObject]@{Name = "WSUS"; IP = "192.168.10.14"; Script = "WSUS.ps1"}
+    [PSCustomObject]@{Name = "CL01"; IP = "192.168.10.50"; Script = "CL01.ps1"}
+)
 Foreach ($VMName in $VMNames) {
-
+    $VM = $VMName.Name
     #Create New VM
     $Params = @{
-        Name = $VMName
+        Name = $VM
         MemoryStartupBytes = 1GB
-        Path = "E:\$VMName"
+        Path = "E:\$VM"
         Generation = 2
         SwitchName = "Private vSwitch"
     }
@@ -456,7 +462,7 @@ Foreach ($VMName in $VMNames) {
 
     #Edit VM
     $Params = @{
-        Name = $VMName
+        Name = $VM
         ProcessorCount = 4
         DynamicMemory = $true
         MemoryMinimumBytes = 1GB
@@ -466,7 +472,7 @@ Foreach ($VMName in $VMNames) {
 
     #Specify CPU settings
     $Params = @{
-        VMName = $VMName
+        VMName = $VM
         Count = 8
         Maximum = 100
         RelativeWeight = 100
@@ -475,7 +481,7 @@ Foreach ($VMName in $VMNames) {
 
     #Add Installer ISO
     $Params = @{
-        VMName = $VMName
+        VMName = $VM
         Path = "E:\ISO\WINSERVER-22-Auto.iso"
     }
     if($VMName -eq "CL01") {$Params['Path'] = "E:\ISO\Windows.iso"}
@@ -483,27 +489,27 @@ Foreach ($VMName in $VMNames) {
     Add-VMDvdDrive @Params
 
     #Copy autounattend.xml to VM Folder
-    Copy-Item -Path "E:\autounattend\" -Destination E:\$VMName -Recurse
+    Copy-Item -Path "E:\autounattend\" -Destination E:\$VM -Recurse
 
     #Edit autounattend.xml to customize ComputerName
-    (Get-Content "E:\$VMName\autounattend\autounattend.xml").replace("1ComputerName", $VMName) | Set-Content "E:\$VMName\autounattend\autounattend.xml"
+    (Get-Content "E:\$VM\autounattend\autounattend.xml").replace("1ComputerName", $VM) | Set-Content "E:\$VM\autounattend\autounattend.xml"
 
     #Create the ISO
-    New-ISOFile -source "E:\$VMName\autounattend\" -destinationIso "E:\$VMName\autounattend.iso" -title autounattend -Verbose
+    New-ISOFile -source "E:\$VM\autounattend\" -destinationIso "E:\$VM\autounattend.iso" -title autounattend -Verbose
 
     #Cleanup
-    Remove-Item -Recurse -Path "E:\$VMName\autounattend\"
+    Remove-Item -Recurse -Path "E:\$VM\autounattend\"
 
     #Add autounattend ISO
     $Params = @{
-        VMName = $VMName
-        Path = "E:\$VMName\autounattend.iso"
+        VMName = $VM
+        Path = "E:\$VM\autounattend.iso"
     }
     Add-VMDvdDrive @Params
 
     #Create OS Drive
     $Params = @{
-        Path = "E:\$VMName\Virtual Hard Disks\$VMName-OS.vhdx"
+        Path = "E:\$VM\Virtual Hard Disks\$VM-OS.vhdx"
         SizeBytes = 60GB
         Dynamic = $true
     }
@@ -511,7 +517,7 @@ Foreach ($VMName in $VMNames) {
 
     #Create Data Drive
     $Params = @{
-        Path = "E:\$VMName\Virtual Hard Disks\$VMName-Data.vhdx"
+        Path = "E:\$VM\Virtual Hard Disks\$VM-Data.vhdx"
         SizeBytes = 500GB
         Dynamic = $true
     }
@@ -519,26 +525,26 @@ Foreach ($VMName in $VMNames) {
 
     #Add OS Drive to VM
     $Params = @{
-        VMName = $VMName
-        Path = "E:\$VMName\Virtual Hard Disks\$VMName-OS.vhdx"
+        VMName = $VM
+        Path = "E:\$VM\Virtual Hard Disks\$VM-OS.vhdx"
     }
     Add-VMHardDiskDrive @Params
 
     #Add Data Drive to VM
     $Params = @{
-        VMName = $VMName
-        Path = "E:\$VMName\Virtual Hard Disks\$VMName-Data.vhdx"
+        VMName = $VM
+        Path = "E:\$VM\Virtual Hard Disks\$VM-Data.vhdx"
     }
     Add-VMHardDiskDrive @Params
 
     #Set boot priority
-    $Order1 = Get-VMDvdDrive -VMName $VMName | Where-Object Path  -NotMatch "unattend"
-    $Order2 = Get-VMHardDiskDrive -VMName $VMName | Where-Object Path -Match "OS"
-    $Order3 = Get-VMHardDiskDrive -VMName $VMName | Where-Object Path -Match "Data"
-    $Order4 = Get-VMDvdDrive -VMName $VMName | Where-Object Path  -Match "unattend"
-    $Order5 = Get-VMNetworkAdapter -VMName $VMname
-    Set-VMFirmware -VMName $VMName -BootOrder $Order1, $Order2, $Order3, $Order4, $Order5
+    $Order1 = Get-VMDvdDrive -VMName $VM | Where-Object Path  -NotMatch "unattend"
+    $Order2 = Get-VMHardDiskDrive -VMName $VM | Where-Object Path -Match "OS"
+    $Order3 = Get-VMHardDiskDrive -VMName $VM | Where-Object Path -Match "Data"
+    $Order4 = Get-VMDvdDrive -VMName $VM | Where-Object Path  -Match "unattend"
+    $Order5 = Get-VMNetworkAdapter -VMName $VM
+    Set-VMFirmware -VMName $VM -BootOrder $Order1, $Order2, $Order3, $Order4, $Order5
 
-    Start-VM -Name $VMName
+    Start-VM -Name $VM
 }
 
