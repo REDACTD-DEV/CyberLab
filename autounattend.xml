@@ -13,7 +13,6 @@
         </component>
         <component name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
             <DiskConfiguration>
-
             <Disk wcm:action="add">
                 <DiskID>0</DiskID> 
                 <WillWipeDisk>true</WillWipeDisk> 
@@ -104,7 +103,7 @@
                 <ProtectYourPC>3</ProtectYourPC>
                 <SkipMachineOOBE>true</SkipMachineOOBE>
                 <SkipUserOOBE>true</SkipUserOOBE>
-            </OOBE>
+            </OOBE>       
             <TimeZone>UTC</TimeZone>
             <UserAccounts>
                 <AdministratorPassword>
@@ -119,6 +118,7 @@
                 </Password>
                 <Username>Administrator</Username>
                 <Enabled>true</Enabled>
+            <ComputerName>DC01</ComputerName>
             </AutoLogon>
             <FirstLogonCommands>
                 <SynchronousCommand wcm:action="add">
