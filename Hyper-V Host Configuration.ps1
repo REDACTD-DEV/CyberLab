@@ -484,8 +484,8 @@ Foreach ($VMName in $VMNames) {
         VMName = $VM
         Path = "E:\ISO\WINSERVER-22-Auto.iso"
     }
-    if($VMName -eq "CL01") {$Params['Path'] = "E:\ISO\Windows.iso"}
-    if($VMName -eq "pfSense") {$Params['Path'] = "E:\ISO\pfSense.iso"}
+    if($VM -eq "CL01") {$Params['Path'] = "E:\ISO\Windows.iso"}
+    if($VM -eq "pfSense") {$Params['Path'] = "E:\ISO\pfSense.iso"}
     Add-VMDvdDrive @Params
 
     #Copy autounattend.xml to VM Folder
