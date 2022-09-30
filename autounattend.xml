@@ -108,21 +108,9 @@
             <TimeZone>UTC</TimeZone>
             <UserAccounts>
                 <AdministratorPassword>
-                    <Value>1Password=</Value>
+                    <Value>1Password</Value>
                     <PlainText>true</PlainText>
                 </AdministratorPassword>
-                <LocalAccounts>
-                    <LocalAccount wcm:action="add">
-                        <Password>
-                            <Value>1Password</Value>
-                            <PlainText>true</PlainText>
-                        </Password>
-                        <Description>Administrator</Description>
-                        <DisplayName>Administrator</DisplayName>
-                        <Group>administrators</Group>
-                        <Name>Administrator</Name>
-                    </LocalAccount>
-                </LocalAccounts>
             </UserAccounts>
             <AutoLogon>
                 <Password>
