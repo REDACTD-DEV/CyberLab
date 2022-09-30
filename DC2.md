@@ -10,7 +10,7 @@ Get-ADDCCloningExcludedApplicationList -GenerateXML
 $Params = @{
     CloneComputerName   =   "DC2"
     Static              =   $true
-    IPv4Address         =   "192.168.10.14"
+    IPv4Address         =   "192.168.10.11"
     IPv4SubnetMask      =   "255.255.255.0"
     IPv4DefaultGateway  =   "192.168.10.1"
     IPv4DNSResolver     =   "192.168.10.10"
