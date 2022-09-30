@@ -1,7 +1,5 @@
-## NAT Adapter to provide internet to guest VMs
-New-VMSwitch -SwitchName "NATSwitch" -SwitchType Internal
-New-NetIPAddress -IPAddress 192.168.10.1 -PrefixLength 24 -InterfaceAlias "vEthernet (NATSwitch)"
-New-NetNAT -Name "NATNetwork" -InternalIPInterfaceAddressPrefix 192.168.10.0/24
+## NAT Adapter configuration
+New-VMSwitch -name "Private vSwitch" -SwitchType Private
 
 ## Edit Windows Server ISO to boot without pressing a key
 #Mount ISO
@@ -175,7 +173,7 @@ Foreach ($VMName in $VMNames) {
         MemoryStartupBytes = 1GB
         Path = "E:\$VMName"
         Generation = 2
-        SwitchName = "Private Virtual Switch"
+        SwitchName = "Private vSwitch"
     }
     New-VM @Params
 
@@ -225,7 +223,7 @@ Foreach ($VMName in $VMNames) {
         Path = "E:\$VMName\autounattend.iso"
     }
     Add-VMDvdDrive @Params
-    
+
     #Create OS Drive
     $Params = @{
         Path = "E:\$VMName\Virtual Hard Disks\$VMName-OS.vhdx"
