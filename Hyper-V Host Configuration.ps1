@@ -349,7 +349,6 @@ $data = @"
                         </ModifyPartition>
                     </ModifyPartitions>
             </Disk>
-
             <WillShowUI>OnError</WillShowUI> 
             </DiskConfiguration>
             <ImageInstall>
@@ -387,7 +386,28 @@ $data = @"
 	<settings pass="specialize">
 		<component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 			<ComputerName>1ComputerName</ComputerName>
-		 </component>
+		</component>
+        <component xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" name="Microsoft-Windows-TCPIP" processorArchitecture="x86" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+            <Interfaces>
+                <Interface wcm:action="add">
+                    <Ipv4Settings>
+                        <DhcpEnabled>false</DhcpEnabled>
+                    </Ipv4Settings>
+                    <UnicastIpAddresses>
+                        <IpAddress wcm:action="add" wcm:keyValue="1">1IPAddress</IpAddress>
+                    </UnicastIpAddresses>
+                    <Identifier>Local Area Connection</Identifier>
+                    <Routes>
+                        <Route wcm:action="add">
+                            <Identifier>0</Identifier>
+                            <Prefix>0.0.0.0/0</Prefix>
+                            <NextHopAddress>192.168.10.1</NextHopAddress>
+                            <Metric>20</Metric>
+                        </Route>
+                    </Routes>
+                </Interface>
+            </Interfaces>
+        </component>
 	</settings>
     <settings pass="oobeSystem">
         <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -425,7 +445,7 @@ $data = @"
             </AutoLogon>
             <FirstLogonCommands>
                 <SynchronousCommand wcm:action="add">
-                    <CommandLine>cmd.exe /c powershell -Command "echo "Hello World!!!""</CommandLine>
+                    <CommandLine>cmd.exe /c powershell -Command 1Script"</CommandLine>
                     <Description>Run a command here</Description>
                     <Order>1</Order>
                     <RequiresUserInput>true</RequiresUserInput>
@@ -442,11 +462,11 @@ $data | out-file "E:\autounattend\autounattend.xml" -Encoding "utf8"
 
 ## Deploy VMs
 $VMNames = @(
-    [PSCustomObject]@{Name = "DC01"; IP = "192.168.10.10"; Script = "DC01.ps1"}
-    [PSCustomObject]@{Name = "DHCP"; IP = "192.168.10.12"; Script = "DHCP.ps1"}
-    [PSCustomObject]@{Name = "FS01"; IP = "192.168.10.13"; Script = "FS01.ps1"}
-    [PSCustomObject]@{Name = "WSUS"; IP = "192.168.10.14"; Script = "WSUS.ps1"}
-    [PSCustomObject]@{Name = "CL01"; IP = "192.168.10.50"; Script = "CL01.ps1"}
+    [PSCustomObject]@{Name = "DC01"; IP = "192.168.10.10/24"; MAC = "00155da182d1"; Script = "DC01.ps1"}
+#    [PSCustomObject]@{Name = "DHCP"; IP = "192.168.10.12/24"; MAC = "00155da182d2"; Script = "DHCP.ps1"}
+#    [PSCustomObject]@{Name = "FS01"; IP = "192.168.10.13/24"; MAC = "00155da182d3"; Script = "FS01.ps1"}
+#    [PSCustomObject]@{Name = "WSUS"; IP = "192.168.10.14/24"; MAC = "00155da182d4"; Script = "WSUS.ps1"}
+#    [PSCustomObject]@{Name = "CL01"; IP = "192.168.10.50/24"; MAC = "00155da182d5"; Script = "CL01.ps1"}
 )
 Foreach ($VMName in $VMNames) {
     $VM = $VMName.Name
@@ -459,6 +479,10 @@ Foreach ($VMName in $VMNames) {
         SwitchName = "Private vSwitch"
     }
     New-VM @Params
+
+    Set-VMNetworkAdapter -VMName $VM -StaticMacAddress $VMName.MAC
+    #Add hyphens to the MAC address for later
+    $XMLMAC = ($VMName.MAC -replace '..(?!$)','$&-').ToUpper()
 
     #Edit VM
     $Params = @{
@@ -491,8 +515,13 @@ Foreach ($VMName in $VMNames) {
     #Copy autounattend.xml to VM Folder
     Copy-Item -Path "E:\autounattend\" -Destination E:\$VM -Recurse
 
-    #Edit autounattend.xml to customize ComputerName
+    #Copy VM Automation script into autounattend so it can run on first logon
+    Copy-Item -Path E:\$VM.ps1 -Destination E:\$VM\autounattend\$VM.ps1 
+
+    #Customize autounattend.xml for each VM
     (Get-Content "E:\$VM\autounattend\autounattend.xml").replace("1ComputerName", $VM) | Set-Content "E:\$VM\autounattend\autounattend.xml"
+    $Script = "E:\" + $VMName.Script
+    (Get-Content "E:\$VM\autounattend\autounattend.xml").replace("1Script", $Script) | Set-Content "E:\$VM\autounattend\autounattend.xml"
 
     #Create the ISO
     New-ISOFile -source "E:\$VM\autounattend\" -destinationIso "E:\$VM\autounattend.iso" -title autounattend -Verbose
@@ -547,4 +576,11 @@ Foreach ($VMName in $VMNames) {
 
     Start-VM -Name $VM
 }
-
+#Sleep for 10 mins
+#Invoke commands in each VM to configure them
+#Doing it this way allows for workflows that can auto-resume when a VM restarts
+Start-Sleep -Seconds 500
+$usr = "ad\Administrator"
+$pwd = ConvertTo-SecureString "1Password" -AsPlainText -Force
+$cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $usr, $pwd
+Invoke-Command -Credential $cred -VMName DC01 -FilePath E:\DC01-postinstall.ps1
