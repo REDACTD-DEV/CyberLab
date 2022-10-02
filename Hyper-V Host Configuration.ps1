@@ -657,4 +657,4 @@ Start-Sleep -Seconds 10
 Invoke-Command -Credential $cred -VMName FS01 -FilePath E:\FS01-postinstall.ps1
 
 #Group policy configuration
-Invoke-Command -Credential $cred -VMName DHCP -FilePath E:\group-policy.ps1
+Invoke-Command -Credential $cred -VMName DC01 -FilePath E:\group-policy.ps1
