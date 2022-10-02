@@ -274,8 +274,31 @@ function New-ISOFile {
 
 } # function
 
-## NAT Adapter configuration
-New-VMSwitch -name "Private vSwitch" -SwitchType Private
+#Set Default Switch host adapter to an IP address in range
+#Variable settings for adapter.
+$IP = "192.168.10.2"
+$MaskBits = 24 # This means subnet mask = 255.255.255.0
+$Gateway = "192.168.10.2"
+$Dns = "1.1.1.1"
+$IPType = "IPv4"
+
+# Retrieve the network adapter
+$adapter = Get-NetAdapter -InterfaceAlias "vEthernet (Default Switch)"
+
+# Remove any existing IP
+If (($adapter | Get-NetIPConfiguration).IPv4Address.IPAddress) {
+ $adapter | Remove-NetIPAddress -AddressFamily $IPType -Confirm:$false
+}
+
+#Removing any previous IP Address Gateway.
+If (($adapter | Get-NetIPConfiguration).Ipv4DefaultGateway) {
+ $adapter | Remove-NetRoute -AddressFamily $IPType -Confirm:$false
+}
+ #Configure the IP address and default gateway
+$adapter | New-NetIPAddress -AddressFamily $IPType -IPAddress $IP -PrefixLength $MaskBits -DefaultGateway $Gateway
+
+# Configure the DNS client server IP addresses
+$adapter | Set-DnsClientServerAddress -ServerAddresses $DNS
 
 ## Edit Windows Server ISO to boot without pressing a key
 #Mount ISO
@@ -476,7 +499,7 @@ Foreach ($VMName in $VMNames) {
         MemoryStartupBytes = 1GB
         Path = "E:\$VM"
         Generation = 2
-        SwitchName = "Private vSwitch"
+        SwitchName = "Default Switch"
     }
     New-VM @Params
 
@@ -576,10 +599,12 @@ Foreach ($VMName in $VMNames) {
 
     Start-VM -Name $VM
 }
-#Sleep for 10 mins
-#Invoke commands in each VM to configure them
-#Doing it this way allows for workflows that can auto-resume when a VM restarts
-Start-Sleep -Seconds 500
+#Wait for Active Directory Web Services to come online
+while ((Test-NetConnection -ComputerName 192.168.10.10 -Port 9389).TcpTestSucceeded -ne "True") {
+Start-Sleep -Seconds 10
+}
+Write-Host "AD WS is primed"
+
 $usr = "ad\Administrator"
 $pwd = ConvertTo-SecureString "1Password" -AsPlainText -Force
 $cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $usr, $pwd
