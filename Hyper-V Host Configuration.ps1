@@ -431,7 +431,7 @@ $data = @"
                 </Interface>
             </Interfaces>
         </component>
-	</settings>
+    </settings>
     <settings pass="oobeSystem">
         <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
             <InputLocale>en-US</InputLocale>
@@ -484,128 +484,177 @@ $data | out-file "E:\autounattend\autounattend.xml" -Encoding "utf8"
 
 
 ## Deploy VMs
-$VMNames = @(
+$VMConfigs = @(
     [PSCustomObject]@{Name = "DC01"; IP = "192.168.10.10/24"; MAC = "00155da182d1"; Script = "DC01.ps1"}
-#    [PSCustomObject]@{Name = "DHCP"; IP = "192.168.10.12/24"; MAC = "00155da182d2"; Script = "DHCP.ps1"}
-#    [PSCustomObject]@{Name = "FS01"; IP = "192.168.10.13/24"; MAC = "00155da182d3"; Script = "FS01.ps1"}
-#    [PSCustomObject]@{Name = "WSUS"; IP = "192.168.10.14/24"; MAC = "00155da182d4"; Script = "WSUS.ps1"}
-#    [PSCustomObject]@{Name = "CL01"; IP = "192.168.10.50/24"; MAC = "00155da182d5"; Script = "CL01.ps1"}
+    [PSCustomObject]@{Name = "DHCP"; IP = "192.168.10.12/24"; MAC = "00155da182d2"; Script = "DHCP.ps1"}
+    [PSCustomObject]@{Name = "FS01"; IP = "192.168.10.13/24"; MAC = "00155da182d3"; Script = "FS01.ps1"}
+    [PSCustomObject]@{Name = "WSUS"; IP = "192.168.10.14/24"; MAC = "00155da182d4"; Script = "WSUS.ps1"}
+    [PSCustomObject]@{Name = "CL01"; IP = "192.168.10.50/24"; MAC = "00155da182d5"; Script = "CL01.ps1"}
 )
-Foreach ($VMName in $VMNames) {
-    $VM = $VMName.Name
-    #Create New VM
-    $Params = @{
-        Name = $VM
-        MemoryStartupBytes = 1GB
-        Path = "E:\$VM"
-        Generation = 2
-        SwitchName = "Default Switch"
+
+function Create-CustomVM {
+	[CmdletBinding()]
+	param(
+		[Parameter()]
+		[String]$VMName,
+		[Parameter()]
+		[String]$IP,
+		[Parameter()]
+		[String]$MAC,
+		[Parameter()]
+		[String]$Script
+	)
+	
+
+    process {
+        #Create New VM
+        $Params = @{
+            Name = $VMName
+            MemoryStartupBytes = 1GB
+            Path = "E:\$VMName"
+            Generation = 2
+            SwitchName = "Default Switch"
+        }
+        New-VM @Params
+
+        Set-VMNetworkAdapter -VMName $VMName -StaticMacAddress $MAC
+        #Add hyphens to the MAC address for later
+        $XMLMAC = ($MAC -replace '..(?!$)','$&-').ToUpper()
+
+        #Edit VM
+        $Params = @{
+            Name = $VMName
+            ProcessorCount = 4
+            DynamicMemory = $true
+            MemoryMinimumBytes = 1GB
+            MemoryMaximumBytes = 4GB
+        }
+        Set-VM @Params
+
+        #Specify CPU settings
+        $Params = @{
+            VMName = $VMName
+            Count = 8
+            Maximum = 100
+            RelativeWeight = 100
+        }
+        Set-VMProcessor @Params
+
+        #Add Installer ISO
+        $Params = @{
+            VMName = $VMName
+            Path = "E:\ISO\WINSERVER-22-Auto.iso"
+        }
+        if($VMName -eq "CL01") {$Params['Path'] = "E:\ISO\Windows.iso"}
+        if($VMName -eq "pfSense") {$Params['Path'] = "E:\ISO\pfSense.iso"}
+        Add-VMDvdDrive @Params
+
+        #Copy autounattend.xml to VM Folder
+        Copy-Item -Path "E:\autounattend\" -Destination E:\$VMName -Recurse
+
+        #Copy VM Automation script into autounattend so it can run on first logon
+        Copy-Item -Path E:\$VMName.ps1 -Destination E:\$VMName\autounattend\$VMName.ps1 
+
+        #Customize autounattend.xml for each VM
+        (Get-Content "E:\$VMName\autounattend\autounattend.xml").replace("1ComputerName", $VMName) | Set-Content "E:\$VMName\autounattend\autounattend.xml"
+        $Script = "E:\" + $Script
+        (Get-Content "E:\$VMName\autounattend\autounattend.xml").replace("1Script", $Script) | Set-Content "E:\$VMName\autounattend\autounattend.xml"
+
+        #Create the ISO
+        New-ISOFile -source "E:\$VMName\autounattend\" -destinationIso "E:\$VMName\autounattend.iso" -title autounattend -Verbose
+
+        #Cleanup
+        Remove-Item -Recurse -Path "E:\$VMName\autounattend\"
+
+        #Add autounattend ISO
+        $Params = @{
+            VMName = $VMName
+            Path = "E:\$VMName\autounattend.iso"
+        }
+        Add-VMDvdDrive @Params
+
+        #Create OS Drive
+        $Params = @{
+            Path = "E:\$VMName\Virtual Hard Disks\$VMName-OS.vhdx"
+            SizeBytes = 60GB
+            Dynamic = $true
+        }
+        New-VHD @Params
+
+        #Create Data Drive
+        $Params = @{
+            Path = "E:\$VMName\Virtual Hard Disks\$VMName-Data.vhdx"
+            SizeBytes = 500GB
+            Dynamic = $true
+        }
+        New-VHD @Params
+
+        #Add OS Drive to VM
+        $Params = @{
+            VMName = $VMName
+            Path = "E:\$VMName\Virtual Hard Disks\$VMName-OS.vhdx"
+        }
+        Add-VMHardDiskDrive @Params
+
+        #Add Data Drive to VM
+        $Params = @{
+            VMName = $VMName
+            Path = "E:\$VMName\Virtual Hard Disks\$VMName-Data.vhdx"
+        }
+        Add-VMHardDiskDrive @Params
+
+        #Set boot priority
+        $Order1 = Get-VMDvdDrive -VMName $VMName | Where-Object Path  -NotMatch "unattend"
+        $Order2 = Get-VMHardDiskDrive -VMName $VMName | Where-Object Path -Match "OS"
+        $Order3 = Get-VMHardDiskDrive -VMName $VMName | Where-Object Path -Match "Data"
+        $Order4 = Get-VMDvdDrive -VMName $VMName | Where-Object Path  -Match "unattend"
+        $Order5 = Get-VMNetworkAdapter -VMName $VMName
+        Set-VMFirmware -VMName $VMName -BootOrder $Order1, $Order2, $Order3, $Order4, $Order5
+
+        Start-VM -Name $VMName
     }
-    New-VM @Params
 
-    Set-VMNetworkAdapter -VMName $VM -StaticMacAddress $VMName.MAC
-    #Add hyphens to the MAC address for later
-    $XMLMAC = ($VMName.MAC -replace '..(?!$)','$&-').ToUpper()
-
-    #Edit VM
-    $Params = @{
-        Name = $VM
-        ProcessorCount = 4
-        DynamicMemory = $true
-        MemoryMinimumBytes = 1GB
-        MemoryMaximumBytes = 4GB
-    }
-    Set-VM @Params
-
-    #Specify CPU settings
-    $Params = @{
-        VMName = $VM
-        Count = 8
-        Maximum = 100
-        RelativeWeight = 100
-    }
-    Set-VMProcessor @Params
-
-    #Add Installer ISO
-    $Params = @{
-        VMName = $VM
-        Path = "E:\ISO\WINSERVER-22-Auto.iso"
-    }
-    if($VM -eq "CL01") {$Params['Path'] = "E:\ISO\Windows.iso"}
-    if($VM -eq "pfSense") {$Params['Path'] = "E:\ISO\pfSense.iso"}
-    Add-VMDvdDrive @Params
-
-    #Copy autounattend.xml to VM Folder
-    Copy-Item -Path "E:\autounattend\" -Destination E:\$VM -Recurse
-
-    #Copy VM Automation script into autounattend so it can run on first logon
-    Copy-Item -Path E:\$VM.ps1 -Destination E:\$VM\autounattend\$VM.ps1 
-
-    #Customize autounattend.xml for each VM
-    (Get-Content "E:\$VM\autounattend\autounattend.xml").replace("1ComputerName", $VM) | Set-Content "E:\$VM\autounattend\autounattend.xml"
-    $Script = "E:\" + $VMName.Script
-    (Get-Content "E:\$VM\autounattend\autounattend.xml").replace("1Script", $Script) | Set-Content "E:\$VM\autounattend\autounattend.xml"
-
-    #Create the ISO
-    New-ISOFile -source "E:\$VM\autounattend\" -destinationIso "E:\$VM\autounattend.iso" -title autounattend -Verbose
-
-    #Cleanup
-    Remove-Item -Recurse -Path "E:\$VM\autounattend\"
-
-    #Add autounattend ISO
-    $Params = @{
-        VMName = $VM
-        Path = "E:\$VM\autounattend.iso"
-    }
-    Add-VMDvdDrive @Params
-
-    #Create OS Drive
-    $Params = @{
-        Path = "E:\$VM\Virtual Hard Disks\$VM-OS.vhdx"
-        SizeBytes = 60GB
-        Dynamic = $true
-    }
-    New-VHD @Params
-
-    #Create Data Drive
-    $Params = @{
-        Path = "E:\$VM\Virtual Hard Disks\$VM-Data.vhdx"
-        SizeBytes = 500GB
-        Dynamic = $true
-    }
-    New-VHD @Params
-
-    #Add OS Drive to VM
-    $Params = @{
-        VMName = $VM
-        Path = "E:\$VM\Virtual Hard Disks\$VM-OS.vhdx"
-    }
-    Add-VMHardDiskDrive @Params
-
-    #Add Data Drive to VM
-    $Params = @{
-        VMName = $VM
-        Path = "E:\$VM\Virtual Hard Disks\$VM-Data.vhdx"
-    }
-    Add-VMHardDiskDrive @Params
-
-    #Set boot priority
-    $Order1 = Get-VMDvdDrive -VMName $VM | Where-Object Path  -NotMatch "unattend"
-    $Order2 = Get-VMHardDiskDrive -VMName $VM | Where-Object Path -Match "OS"
-    $Order3 = Get-VMHardDiskDrive -VMName $VM | Where-Object Path -Match "Data"
-    $Order4 = Get-VMDvdDrive -VMName $VM | Where-Object Path  -Match "unattend"
-    $Order5 = Get-VMNetworkAdapter -VMName $VM
-    Set-VMFirmware -VMName $VM -BootOrder $Order1, $Order2, $Order3, $Order4, $Order5
-
-    Start-VM -Name $VM
 }
+Create-CustomVM -VMName $VMConfigs.Name[0] -IP $VMConfigs.IP[0] -MAC $VMConfigs.MAC[0] -Script $VMConfigs.Script[0]
+
+
 #Wait for Active Directory Web Services to come online
 while ((Test-NetConnection -ComputerName 192.168.10.10 -Port 9389).TcpTestSucceeded -ne "True") {
 Start-Sleep -Seconds 10
 }
-Write-Host "AD WS is primed"
+Write-Host "ADWS is primed"
+Create-CustomVM -VMName $VMConfigs.Name[1] -IP $VMConfigs.IP[1] -MAC $VMConfigs.MAC[1] -Script $VMConfigs.Script[1]
+Create-CustomVM -VMName $VMConfigs.Name[2] -IP $VMConfigs.IP[2] -MAC $VMConfigs.MAC[2] -Script $VMConfigs.Script[2]
 
+#DC01 postinstall script
 $usr = "ad\Administrator"
 $pwd = ConvertTo-SecureString "1Password" -AsPlainText -Force
 $cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $usr, $pwd
 Invoke-Command -Credential $cred -VMName DC01 -FilePath E:\DC01-postinstall.ps1
+
+#Check if VM is ready for remote commands
+while ((Get-VM -VMName "DHCP").Heartbeat -ne "okApplicationsUnknown") {
+Start-Sleep -Seconds 10
+}
+
+#Needs time to run first time login script 
+Start-Sleep -Seconds 90
+
+#Check if VM is ready for remote commands
+while ((Get-VM -VMName "DHCP").Heartbeat -ne "okApplicationsUnknown") {
+Start-Sleep -Seconds 10
+}
+
+#DHCP postinstall script
+Invoke-Command -Credential $cred -VMName DHCP -FilePath E:\DHCP-postinstall.ps1
+
+#Check if VM is ready for remote commands
+while ((Get-VM -VMName "FS01").Heartbeat -ne "okApplicationsUnknown") {
+Start-Sleep -Seconds 10
+}
+
+#FS01 postinstall script
+Invoke-Command -Credential $cred -VMName FS01 -FilePath E:\FS01-postinstall.ps1
+
+#Group policy configuration
+Invoke-Command -Credential $cred -VMName DHCP -FilePath E:\group-policy.ps1
