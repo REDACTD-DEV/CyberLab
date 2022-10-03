@@ -835,7 +835,9 @@ Invoke-Command -VMName DC01 -Credential $domaincred -ScriptBlock {
             {
             Start-Sleep -Seconds 1
             }
-	Write-Host "ADWS is primed" -ForegroundColor Blue -BackgroundColor Black
+            #Sleep to make sure ADWS is actually up
+            Start-Sleep -Seconds 30 
+            Write-Host "ADWS is primed" -ForegroundColor Blue -BackgroundColor Black
 	}
 
 #DC01 postinstall script
@@ -846,19 +848,19 @@ Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
     #Create OU's
     Write-Host "Create OU's" -ForegroundColor Blue -BackgroundColor Black
     #Base OU
-    New-ADOrganizationalUnit "Contoso" -path "DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit -Name "Contoso" -Path "DC=ad,DC=contoso,DC=com"
     #Devices
-    New-ADOrganizationalUnit "Devices" -Path "OU=Contoso,DC=ad,DC=contoso,DC=com"
-    New-ADOrganizationalUnit "Servers" -Path "OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
-    New-ADOrganizationalUnit "Workstations" -Path "OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit -Name "Devices" -Path "OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit -Name "Servers" -Path "OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit -Name "Workstations" -Path "OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
     #Users
-    New-ADOrganizationalUnit "Users" -Path "OU=Contoso,DC=ad,DC=contoso,DC=com"
-    New-ADOrganizationalUnit "Admins" -Path "OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com"
-    New-ADOrganizationalUnit "Employees" -Path "OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit -Name "Users" -Path "OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit -Name "Admins" -Path "OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit -Name "Employees" -Path "OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com"
     #Groups
-    New-ADOrganizationalUnit "Groups" -Path "OU=Contoso,DC=ad,DC=contoso,DC=com"
-    New-ADOrganizationalUnit "SecurityGroups" -Path "OU=Groups,OU=Contoso,DC=ad,DC=contoso,DC=com"
-    New-ADOrganizationalUnit "DistributionLists" -Path "OU=Groups,OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit -Name "Groups" -Path "OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit -Name "SecurityGroups" -Path "OU=Groups,OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit -Name "DistributionLists" -Path "OU=Groups,OU=Contoso,DC=ad,DC=contoso,DC=com"
     #New admin user
     Write-Host "New admin user" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
@@ -900,7 +902,7 @@ Write-Host "Wait for DHCP to respond to PowerShell Direct" -ForegroundColor Gree
 while ((Invoke-Command -VMName DHCP -Credential $localcred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 1}
 
 #DHCP configure networking and domain join
-Write-Host "DC01 postinstall script" -ForegroundColor Green -BackgroundColor Black
+Write-Host "DHCP postinstall script" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -Credential $domaincred -VMName DHCP -ScriptBlock {
     #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
     $Params = @{
