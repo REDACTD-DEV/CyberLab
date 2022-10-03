@@ -845,7 +845,7 @@ Invoke-Command -VMName DC01 -Credential $domaincred -ScriptBlock {
 
 Invoke-Command -VMName DC01 -Credential $domaincred -ScriptBlock {
     $LogonUI = Get-Process | Where-Object ProcessName -eq "LogonUI"
-    while ($SR.Status -ne $null) {
+    while ($LogonUI -ne $null) {
         Start-Sleep 5
         Write-Host "LogonUI still processing..."
     }
