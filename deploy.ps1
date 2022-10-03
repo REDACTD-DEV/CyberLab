@@ -846,19 +846,19 @@ Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
     #Create OU's
     Write-Host "Create OU's" -ForegroundColor Blue -BackgroundColor Black
     #Base OU
-    New-ADOrganizationalUnit "Contoso" –path "DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit "Contoso" -path "DC=ad,DC=contoso,DC=com"
     #Devices
-    New-ADOrganizationalUnit "Devices" –path "OU=Contoso,DC=ad,DC=contoso,DC=com"
-    New-ADOrganizationalUnit "Servers" –path "OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
-    New-ADOrganizationalUnit "Workstations" –path "OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit "Devices" -Path "OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit "Servers" -Path "OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit "Workstations" -Path "OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
     #Users
-    New-ADOrganizationalUnit "Users" –path "OU=Contoso,DC=ad,DC=contoso,DC=com"
-    New-ADOrganizationalUnit "Admins" –path "OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com"
-    New-ADOrganizationalUnit "Employees" –path "OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit "Users" -Path "OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit "Admins" -Path "OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit "Employees" -Path "OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com"
     #Groups
-    New-ADOrganizationalUnit "Groups" –path "OU=Contoso,DC=ad,DC=contoso,DC=com"
-    New-ADOrganizationalUnit "SecurityGroups" –path "OU=Groups,OU=Contoso,DC=ad,DC=contoso,DC=com"
-    New-ADOrganizationalUnit "DistributionLists" –path "OU=Groups,OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit "Groups" -Path "OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit "SecurityGroups" -Path "OU=Groups,OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit "DistributionLists" -Path "OU=Groups,OU=Contoso,DC=ad,DC=contoso,DC=com"
     #New admin user
     Write-Host "New admin user" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
