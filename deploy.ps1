@@ -1161,8 +1161,15 @@ Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
     New-ADDCCloneConfigFile @Params
 
     #Shutdown DC01
-    Stop-Computer
+    Stop-Computer -Force
 }
+#Check DC01 is shutdown
+while (Get-VM  "DC01" | where State -ne "Off")
+    {
+        write-host "waiting for DC01 to shutdown..."
+        start-sleep -Seconds 5
+    }
+
 
 Export-VM -Name "DC01" -Path E:\Export
 Start-VM -Name "DC01"
