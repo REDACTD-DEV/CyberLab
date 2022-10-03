@@ -831,6 +831,14 @@ Start-Sleep -Seconds 10
 Write-Host "Wait for DC01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
 while ((Invoke-Command -VMName DC01 -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 1}
 
+Invoke-Command -VMName DC01 -Credential $domaincred -ScriptBlock {
+    while ((Get-Process | Where-Object ProcessName -eq "LogonUI") -ne $null) {
+        Start-Sleep 5
+        Write-Host "LogonUI still processing..."
+    }
+Write-host "LogonUI is down! Server is good to go!"
+}
+
 #Wait for Active Directory Web Services to come online
 Write-Host "Wait for Active Directory Web Services to come online" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -VMName DC01 -Credential $domaincred -ScriptBlock {
@@ -842,15 +850,6 @@ Invoke-Command -VMName DC01 -Credential $domaincred -ScriptBlock {
         }
     Write-Host "ADWS is primed" -ForegroundColor Blue -BackgroundColor Black
 	}
-
-Invoke-Command -VMName DC01 -Credential $domaincred -ScriptBlock {
-    $LogonUI = Get-Process | Where-Object ProcessName -eq "LogonUI"
-    while ($LogonUI -ne $null) {
-        Start-Sleep 5
-        Write-Host "LogonUI still processing..."
-    }
-Write-host "LogonUI is down! Server is good to go!"
-}
 
 #DC01 postinstall script
 Write-Host "DC01 postinstall script" -ForegroundColor Green -BackgroundColor Black
