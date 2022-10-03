@@ -625,6 +625,10 @@ function Create-CustomVM {
 }
 Write-Host "Deploy DC01" -ForegroundColor Green -BackgroundColor Black
 Create-CustomVM -VMName $VMConfigs.Name[0] -IP $VMConfigs.IP[0] -MAC $VMConfigs.MAC[0] -Script $VMConfigs.Script[0]
+Write-Host "Deploy DHCP" -ForegroundColor Green -BackgroundColor Black
+Create-CustomVM -VMName $VMConfigs.Name[1] -IP $VMConfigs.IP[1] -MAC $VMConfigs.MAC[1] -Script $VMConfigs.Script[1]
+Write-Host "Deploy FS01" -ForegroundColor Green -BackgroundColor Black
+Create-CustomVM -VMName $VMConfigs.Name[2] -IP $VMConfigs.IP[2] -MAC $VMConfigs.MAC[2] -Script $VMConfigs.Script[2]
 
 $localusr = "Administrator"
 $domainusr = "ad\Administrator"
@@ -678,11 +682,6 @@ Invoke-Command -VMName DC01 -Credential $domaincred -ScriptBlock {
             }
 	Write-Host "ADWS is primed" -ForegroundColor Blue -BackgroundColor Black
 	}
-
-Write-Host "Deploy DHCP" -ForegroundColor Green -BackgroundColor Black
-Create-CustomVM -VMName $VMConfigs.Name[1] -IP $VMConfigs.IP[1] -MAC $VMConfigs.MAC[1] -Script $VMConfigs.Script[1]
-Write-Host "Deploy FS01" -ForegroundColor Green -BackgroundColor Black
-Create-CustomVM -VMName $VMConfigs.Name[2] -IP $VMConfigs.IP[2] -MAC $VMConfigs.MAC[2] -Script $VMConfigs.Script[2]
 
 #DC01 postinstall script
 Write-Host "DC01 postinstall script" -ForegroundColor Green -BackgroundColor Black
@@ -741,9 +740,9 @@ Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
     Add-ADGroupMember -Identity "All-Staff" -Members "John.Smith"
 }
 
-#Wait for DHCP to respond to PowerShell Direct
-Write-Host "Wait for DHCP to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((icm -VMName DHCP -Credential $localcred {“Test”} -ea SilentlyContinue) -ne “Test”) {Sleep -Seconds 1}
+#Wait for DC01 to respond to PowerShell Direct
+Write-Host "Wait for DC01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
+while ((icm -VMName DC01 -Credential $localcred {“Test”} -ea SilentlyContinue) -ne “Test”) {Sleep -Seconds 1}
 
 #DHCP configure networking and domain join
 Write-Host "DC01 postinstall script" -ForegroundColor Green -BackgroundColor Black
