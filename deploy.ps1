@@ -844,7 +844,12 @@ Invoke-Command -VMName DC01 -Credential $domaincred -ScriptBlock {
 	}
 
 Invoke-Command -VMName DC01 -Credential $domaincred -ScriptBlock {
-    Invoke-GPUpdate
+    $SR = Get-Service | Where-Object Name -eq StateRepository | Select-Object *
+    while ($SR.Status -eq "Stopped") {
+        Start-Sleep 5
+        Write-Host "SR not up yet..."
+    }
+Write-host "SR is up, server is good to go"
 }
 
 #DC01 postinstall script
