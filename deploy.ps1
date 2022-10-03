@@ -1186,16 +1186,28 @@ $Params = @{
 }
 Import-VM @Params
 Get-VM DC01 | Where State -eq "Off" | Rename-VM -NewName DC02
-Start-VM -Name "DC02"
+
 Remove-Item -Recurse E:\Export\
 
 Wait-ForAD
+
+Start-VM -Name "DC02"
 
 Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
     Remove-ADGroupMember -Identity "Cloneable Domain Controllers" -Members "CN=DC01,OU=Domain Controllers,DC=ad,DC=contoso,DC=com","CN=DC02,OU=Domain Controllers,DC=ad,DC=contoso,DC=com"
 }
 
+#Wait for CL01 to respond to PowerShell Direct
+Write-Host "Wait for CL01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
+while ((Invoke-Command -VMName CL01 -Credential $localcred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 1}
+
 Invoke-Command -Credential $localcred -VMName CL01 -ScriptBlock {
-    ipconfig /release
-    ipconfig /renew
+    $Params = @{
+        DomainName = "ad.contoso.com"
+        OUPath = "OU=Workstations,OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
+        Credential = "ad.contoso.com\Administrator"
+        Force = $true
+        Restart = $true
+    }
+    Add-Computer @Params
 }
