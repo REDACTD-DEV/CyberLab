@@ -623,7 +623,9 @@ function New-CustomVM {
 		[Parameter()]
 		[String]$MAC,
 		[Parameter()]
-		[String]$Script
+		[String]$Script,
+        [Parameter()]
+		[String]$Type
 	)
 	
     process {
@@ -674,13 +676,12 @@ function New-CustomVM {
         Add-VMDvdDrive @Params
 
         #Copy autounattend.xml to VM Folder
+        New-Item -ItemType Directory E:\$VMName\autounattend\
         Write-Host "Copying autounattend.xml for $VMName" -ForegroundColor Magenta -BackgroundColor Black
         if ($Type -eq "Client") {
-        New-Item -ItemType Directory E:\$VMName\autounattend\
         Copy-Item -Path "E:\autounattend\client-autounattend.xml" -Destination E:\$VMName\autounattend\autounattend.xml
         }
         if ($Type -eq "Server") {
-        New-Item -ItemType Directory E:\$VMName\autounattend\
         Copy-Item -Path "E:\autounattend\server-autounattend.xml" -Destination E:\$VMName\autounattend\autounattend.xml
         }
 
