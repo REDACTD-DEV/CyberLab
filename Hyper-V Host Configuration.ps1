@@ -328,7 +328,7 @@ Dismount-DiskImage -ImagePath "E:\ISO\WINSERVER-22.iso"
 Write-Host "Create folder for autounattend ISO" -ForegroundColor Green -BackgroundColor Black
 New-Item -Type Directory -Path "E:\autounattend"
 
-#Create base autounattend.xml file
+#Create base  server-autounattend.xml file
 Write-Host "Create base autounattend.xml file" -ForegroundColor Green -BackgroundColor Black
 $data = @"
 <?xml version="1.0" encoding="utf-8"?>
@@ -490,16 +490,127 @@ $data = @"
 </unattend>
 "@
 #Write XML
-$data | out-file "E:\autounattend\autounattend.xml" -Encoding "utf8"
+$data | out-file "E:\autounattend\server-autounattend.xml" -Encoding "utf8"
+
+
+#Create base  server-autounattend.xml file
+Write-Host "Create base autounattend.xml file" -ForegroundColor Green -BackgroundColor Black
+$data = @"
+<?xml version="1.0" encoding="utf-8"?>
+<unattend xmlns="urn:schemas-microsoft-com:unattend" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+  <settings pass="offlineServicing" />
+  <settings pass="windowsPE">
+    <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <SetupUILanguage>
+        <UILanguage>en-US</UILanguage>
+      </SetupUILanguage>
+      <InputLocale>0409:00000409</InputLocale>
+      <SystemLocale>en-US</SystemLocale>
+      <UILanguage>en-US</UILanguage>
+      <UserLocale>en-US</UserLocale>
+    </component>
+    <component name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <ImageInstall>
+        <OSImage>
+          <InstallTo>
+            <DiskID>0</DiskID>
+            <PartitionID>3</PartitionID>
+          </InstallTo>
+        </OSImage>
+      </ImageInstall>
+      <UserData>
+        <ProductKey>
+          <Key>VK7JG-NPHTM-C97JM-9MPGT-3V66T</Key>
+        </ProductKey>
+        <AcceptEula>true</AcceptEula>
+      </UserData>
+      <RunSynchronous>
+        <RunSynchronousCommand>
+          <Order>1</Order>
+          <Path>cmd.exe /c echo SELECT DISK 0 &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>2</Order>
+          <Path>cmd.exe /c echo CLEAN &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>3</Order>
+          <Path>cmd.exe /c echo CONVERT GPT &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>4</Order>
+          <Path>cmd.exe /c echo CREATE PARTITION EFI SIZE=100 &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>5</Order>
+          <Path>cmd.exe /c echo FORMAT QUICK FS=FAT32 LABEL="System" &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>6</Order>
+          <Path>cmd.exe /c echo CREATE PARTITION MSR SIZE=16 &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>7</Order>
+          <Path>cmd.exe /c echo CREATE PARTITION PRIMARY &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>8</Order>
+          <Path>cmd.exe /c echo FORMAT QUICK FS=NTFS LABEL="Windows" &gt;&gt; X:\diskpart.txt</Path>
+        </RunSynchronousCommand>
+        <RunSynchronousCommand>
+          <Order>9</Order>
+          <Path>cmd.exe /c diskpart /s X:\diskpart.txt &gt;&gt; X:\diskpart.log</Path>
+        </RunSynchronousCommand>
+      </RunSynchronous>
+    </component>
+  </settings>
+  <settings pass="generalize" />
+  <settings pass="specialize" />
+  <settings pass="auditSystem" />
+  <settings pass="auditUser" />
+  <settings pass="oobeSystem">
+    <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <InputLocale>0409:00000409</InputLocale>
+      <SystemLocale>en-US</SystemLocale>
+      <UILanguage>en-US</UILanguage>
+      <UserLocale>en-US</UserLocale>
+    </component>
+    <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <UserAccounts>
+        <AdministratorPassword>
+          <Value>password</Value>
+          <PlainText>true</PlainText>
+        </AdministratorPassword>
+      </UserAccounts>
+      <AutoLogon>
+        <Username>Administrator</Username>
+        <Enabled>true</Enabled>
+        <LogonCount>1</LogonCount>
+        <Password>
+          <Value>password</Value>
+          <PlainText>true</PlainText>
+        </Password>
+      </AutoLogon>
+      <OOBE>
+        <ProtectYourPC>3</ProtectYourPC>
+        <HideEULAPage>true</HideEULAPage>
+        <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
+      </OOBE>
+    </component>
+  </settings>
+</unattend>
+"@
+#Write XML
+$data | out-file "E:\autounattend\client-autounattend.xml" -Encoding "utf8"
 
 
 ## Deploy VMs
 $VMConfigs = @(
-    [PSCustomObject]@{Name = "DC01"; IP = "192.168.10.10/24"; MAC = "00155da182d1"; Script = "DC01.ps1"}
-    [PSCustomObject]@{Name = "DHCP"; IP = "192.168.10.12/24"; MAC = "00155da182d2"; Script = "DHCP.ps1"}
-    [PSCustomObject]@{Name = "FS01"; IP = "192.168.10.13/24"; MAC = "00155da182d3"; Script = "FS01.ps1"}
-    [PSCustomObject]@{Name = "WSUS"; IP = "192.168.10.14/24"; MAC = "00155da182d4"; Script = "WSUS.ps1"}
-    [PSCustomObject]@{Name = "CL01"; IP = "192.168.10.50/24"; MAC = "00155da182d5"; Script = "CL01.ps1"}
+    [PSCustomObject]@{Name = "DC01"; IP = "192.168.10.10/24"; MAC = "00155da182d1"; Script = "DC01.ps1"; Type = "Server"}
+    [PSCustomObject]@{Name = "DHCP"; IP = "192.168.10.12/24"; MAC = "00155da182d2"; Script = "DHCP.ps1"; Type = "Server"}
+    [PSCustomObject]@{Name = "FS01"; IP = "192.168.10.13/24"; MAC = "00155da182d3"; Script = "FS01.ps1"; Type = "Server"}
+    [PSCustomObject]@{Name = "WSUS"; IP = "192.168.10.14/24"; MAC = "00155da182d4"; Script = "WSUS.ps1"; Type = "Server"}
+    [PSCustomObject]@{Name = "CL01"; IP = "192.168.10.50/24"; MAC = "00155da182d5"; Script = "CL01.ps1"; Type = "Client"}
 )
 
 function Create-CustomVM {
@@ -560,8 +671,14 @@ function Create-CustomVM {
         Add-VMDvdDrive @Params
 
         #Copy autounattend.xml to VM Folder
-        Copy-Item -Path "E:\autounattend\" -Destination E:\$VMName -Recurse
-
+        if ($Type -eq "Client") {
+        New-Item -ItemType Directory E:\$VMName\autounattend\
+        Copy-Item -Path "E:\autounattend\client-autounattend.xml" -Destination E:\$VMName\autounattend\autounattend.xml
+        }
+        if ($Type -eq "Server") {
+        New-Item -ItemType Directory E:\$VMName\autounattend\
+        Copy-Item -Path "E:\autounattend\server-autounattend.xml" -Destination E:\$VMName\autounattend\autounattend.xml
+        }
 
         #Customize autounattend.xml for each VM
         (Get-Content "E:\$VMName\autounattend\autounattend.xml").replace("1ComputerName", $VMName) | Set-Content "E:\$VMName\autounattend\autounattend.xml"
