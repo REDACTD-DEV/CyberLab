@@ -626,9 +626,9 @@ function New-CustomVM {
 		[String]$Script
 	)
 	
-
     process {
         #Create New VM
+        Write-Host "Running New-VM for $VMName" -ForegroundColor Magenta -BackgroundColor Black
         $Params = @{
             Name = $VMName
             MemoryStartupBytes = 1GB
@@ -637,10 +637,13 @@ function New-CustomVM {
             SwitchName = "Default Switch"
         }
         New-VM @Params
-
+        
+        #Set Static MAC address
+        Write-Host "Setting MAC address for $VMName" -ForegroundColor Magenta -BackgroundColor Black
         Set-VMNetworkAdapter -VMName $VMName -StaticMacAddress $MAC
 
         #Edit VM
+        Write-Host "Running Set-VM for $VMName" -ForegroundColor Magenta -BackgroundColor Black
         $Params = @{
             Name = $VMName
             ProcessorCount = 4
@@ -651,6 +654,7 @@ function New-CustomVM {
         Set-VM @Params
 
         #Specify CPU settings
+        Write-Host "Running Set-VMProcessor for $VMName" -ForegroundColor Magenta -BackgroundColor Black
         $Params = @{
             VMName = $VMName
             Count = 8
@@ -660,6 +664,7 @@ function New-CustomVM {
         Set-VMProcessor @Params
 
         #Add Installer ISO
+        Write-Host "Setting Install ISO for $VMName" -ForegroundColor Magenta -BackgroundColor Black
         $Params = @{
             VMName = $VMName
             Path = "E:\ISO\WINSERVER-22-Auto.iso"
@@ -669,6 +674,7 @@ function New-CustomVM {
         Add-VMDvdDrive @Params
 
         #Copy autounattend.xml to VM Folder
+        Write-Host "Copying autounattend.xml for $VMName" -ForegroundColor Magenta -BackgroundColor Black
         if ($Type -eq "Client") {
         New-Item -ItemType Directory E:\$VMName\autounattend\
         Copy-Item -Path "E:\autounattend\client-autounattend.xml" -Destination E:\$VMName\autounattend\autounattend.xml
@@ -679,17 +685,18 @@ function New-CustomVM {
         }
 
         #Customize autounattend.xml for each VM
+        Write-Host "Customizing autounattend.xml for $VMName" -ForegroundColor Magenta -BackgroundColor Black
         (Get-Content "E:\$VMName\autounattend\autounattend.xml").replace("1ComputerName", $VMName) | Set-Content "E:\$VMName\autounattend\autounattend.xml"
-        $Script = "E:\" + $Script
-        (Get-Content "E:\$VMName\autounattend\autounattend.xml").replace("1Script", $Script) | Set-Content "E:\$VMName\autounattend\autounattend.xml"
 
         #Create the ISO
+        Write-Host "Creating autounattend ISO for $VMName" -ForegroundColor Magenta -BackgroundColor Black
         New-ISOFile -source "E:\$VMName\autounattend\" -destinationIso "E:\$VMName\autounattend.iso" -title autounattend -Verbose
 
         #Cleanup
         Remove-Item -Recurse -Path "E:\$VMName\autounattend\"
 
         #Add autounattend ISO
+        Write-Host "Attaching autounattend ISO to $VMName" -ForegroundColor Magenta -BackgroundColor Black
         $Params = @{
             VMName = $VMName
             Path = "E:\$VMName\autounattend.iso"
@@ -697,6 +704,7 @@ function New-CustomVM {
         Add-VMDvdDrive @Params
 
         #Create OS Drive
+        Write-Host "Create OS disk for $VMName" -ForegroundColor Magenta -BackgroundColor Black
         $Params = @{
             Path = "E:\$VMName\Virtual Hard Disks\$VMName-OS.vhdx"
             SizeBytes = 60GB
@@ -705,6 +713,7 @@ function New-CustomVM {
         New-VHD @Params
 
         #Create Data Drive
+        Write-Host "Create data disk for $VMName" -ForegroundColor Magenta -BackgroundColor Black
         $Params = @{
             Path = "E:\$VMName\Virtual Hard Disks\$VMName-Data.vhdx"
             SizeBytes = 500GB
@@ -713,6 +722,7 @@ function New-CustomVM {
         New-VHD @Params
 
         #Add OS Drive to VM
+        Write-Host "Attach OS disk for $VMName" -ForegroundColor Magenta -BackgroundColor Black
         $Params = @{
             VMName = $VMName
             Path = "E:\$VMName\Virtual Hard Disks\$VMName-OS.vhdx"
@@ -720,6 +730,7 @@ function New-CustomVM {
         Add-VMHardDiskDrive @Params
 
         #Add Data Drive to VM
+        Write-Host "Attach data disk for $VMName" -ForegroundColor Magenta -BackgroundColor Black
         $Params = @{
             VMName = $VMName
             Path = "E:\$VMName\Virtual Hard Disks\$VMName-Data.vhdx"
@@ -727,13 +738,15 @@ function New-CustomVM {
         Add-VMHardDiskDrive @Params
 
         #Set boot priority
+        Write-Host "Set boot priority for $VMName" -ForegroundColor Magenta -BackgroundColor Black
         $Order1 = Get-VMDvdDrive -VMName $VMName | Where-Object Path  -NotMatch "unattend"
         $Order2 = Get-VMHardDiskDrive -VMName $VMName | Where-Object Path -Match "OS"
         $Order3 = Get-VMHardDiskDrive -VMName $VMName | Where-Object Path -Match "Data"
         $Order4 = Get-VMDvdDrive -VMName $VMName | Where-Object Path  -Match "unattend"
         $Order5 = Get-VMNetworkAdapter -VMName $VMName
         Set-VMFirmware -VMName $VMName -BootOrder $Order1, $Order2, $Order3, $Order4, $Order5
-
+        
+        Write-Host "Starting $VMName" -ForegroundColor Magenta -BackgroundColor Black
         Start-VM -Name $VMName
     }
 
