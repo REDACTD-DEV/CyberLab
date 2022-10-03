@@ -844,12 +844,7 @@ Invoke-Command -VMName DC01 -Credential $domaincred -ScriptBlock {
 	}
 
 Invoke-Command -VMName DC01 -Credential $domaincred -ScriptBlock {
-    $winlogon = Get-Process | Where-Object processname -eq winlogon | Select-Object *
-    while ($winlogon -eq $null) {
-        Start-Sleep 5
-        Write-Host "winlogon not up yet..."
-    }
-Write-host "winlogon is up, server is good to go"
+    Invoke-GPUpdate
 }
 
 #DC01 postinstall script
