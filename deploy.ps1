@@ -304,25 +304,48 @@ $adapter | New-NetIPAddress -AddressFamily $IPType -IPAddress $IP -PrefixLength 
 Write-Host "Configure the DNS client server IP addresses" -ForegroundColor Green -BackgroundColor Black
 $adapter | Set-DnsClientServerAddress -ServerAddresses $DNS
 
-## Edit Windows Server ISO to boot without pressing a key
-#Mount ISO
-Write-Host "Mount ISO" -ForegroundColor Green -BackgroundColor Black
-Mount-DiskImage -ImagePath "E:\ISO\WINSERVER-22.iso"
+$WinServerISO = "E:\ISO\WINSERVER-22.iso"
+$WinClientISO = "E:\ISO\Windows.iso"
+$WinServerAutoISO = "E:\ISO\WINSERVER-22-auto.iso"
+$WinClientAutoISO = "E:\ISO\Windows-auto.iso"
 
-#Copy ISO
+#Mount WinServer ISO
+Write-Host "Mount WinServer ISO" -ForegroundColor Green -BackgroundColor Black
+Mount-DiskImage -ImagePath $WinServerISO
+
+#Copy WinServer ISO
 Write-Host "Copy ISO" -ForegroundColor Green -BackgroundColor Black
-$Path = (Get-DiskImage -ImagePath "E:\ISO\WINSERVER-22.iso" | Get-Volume).DriveLetter + ":\"
-New-Item -Type Directory -Path "E:\ISOBuild"
-Copy-Item -Path $Path* -Destination "E:\ISOBuild" -Recurse
+$Path = (Get-DiskImage -ImagePath $WinServerISO | Get-Volume).DriveLetter + ":\"
+New-Item -Type Directory -Path "E:\WinServerISOBuild"
+Copy-Item -Path $Path* -Destination "E:\WinServerISOBuild" -Recurse
 
-#Create ISO
-Write-Host "Create ISO" -ForegroundColor Green -BackgroundColor Black
-New-ISOFile -source "E:\ISOBuild" -destinationISO "E:\ISO\WINSERVER-22-Auto.iso" -bootfile "E:\ISOBuild\efi\microsoft\boot\efisys_noprompt.bin" -title "WINSERVER-22-Auto" -Verbose
+#Create WinServer ISO
+Write-Host "Create WinServer ISO" -ForegroundColor Green -BackgroundColor Black
+New-ISOFile -source "E:\WinServerISOBuild" -destinationISO $WinServerAutoISO -bootfile "E:\WinServerISOBuild\efi\microsoft\boot\efisys_noprompt.bin" -title "WINSERVER-22-Auto" -Verbose
 
 #Cleanup
 Write-Host "Dismount ISO" -ForegroundColor Green -BackgroundColor Black
-Dismount-DiskImage -ImagePath "E:\ISO\WINSERVER-22.iso"
-#Remove-Item -Recurse -Path "E:\ISOBuild"
+Dismount-DiskImage -ImagePath $WinServerISO
+#Remove-Item -Recurse -Path "E:\WinServerISOBuild"
+
+#Mount WinClient ISO
+Write-Host "Mount WinClient ISO" -ForegroundColor Green -BackgroundColor Black
+Mount-DiskImage -ImagePath $WinClientISO
+
+#Copy WinClient ISO
+Write-Host "Copy WinClient ISO" -ForegroundColor Green -BackgroundColor Black
+$Path = (Get-DiskImage -ImagePath $WinClientISO | Get-Volume).DriveLetter + ":\"
+New-Item -Type Directory -Path "E:\WinClientISOBuild"
+Copy-Item -Path $Path* -Destination "E:\WinClientISOBuild" -Recurse
+
+#Create WinClient ISO
+Write-Host "Create WinClient ISO" -ForegroundColor Green -BackgroundColor Black
+New-ISOFile -source "E:\WinClientISOBuild" -destinationISO $WinClientAutoISO -bootfile "E:\WinClientISOBuild\efi\microsoft\boot\efisys_noprompt.bin" -title "WINClient-22-Auto" -Verbose
+
+#Cleanup
+Write-Host "Dismount ISO" -ForegroundColor Green -BackgroundColor Black
+Dismount-DiskImage -ImagePath $WinServerISO
+#Remove-Item -Recurse -Path "E:\WinServerISOBuild"
 
 #Create folder for autounattend ISO
 Write-Host "Create folder for autounattend ISO" -ForegroundColor Green -BackgroundColor Black
@@ -671,7 +694,7 @@ function New-CustomVM {
             VMName = $VMName
             Path = "E:\ISO\WINSERVER-22-Auto.iso"
         }
-        if($VMName -eq "CL01") {$Params['Path'] = "E:\ISO\Windows.iso"}
+        if($VMName -eq "CL01") {$Params['Path'] = "E:\ISO\Windows-auto.iso"}
         if($VMName -eq "pfSense") {$Params['Path'] = "E:\ISO\pfSense.iso"}
         Add-VMDvdDrive @Params
 
