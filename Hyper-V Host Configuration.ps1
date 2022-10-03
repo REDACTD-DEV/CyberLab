@@ -740,9 +740,9 @@ Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
     Add-ADGroupMember -Identity "All-Staff" -Members "John.Smith"
 }
 
-#Wait for DC01 to respond to PowerShell Direct
-Write-Host "Wait for DC01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((icm -VMName DC01 -Credential $localcred {“Test”} -ea SilentlyContinue) -ne “Test”) {Sleep -Seconds 1}
+#Wait for DHCP to respond to PowerShell Direct
+Write-Host "Wait for DHCP to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
+while ((icm -VMName DHCP -Credential $localcred {“Test”} -ea SilentlyContinue) -ne “Test”) {Sleep -Seconds 1}
 
 #DHCP configure networking and domain join
 Write-Host "DC01 postinstall script" -ForegroundColor Green -BackgroundColor Black
@@ -777,7 +777,43 @@ Invoke-Command -Credential $domaincred -VMName DHCP -ScriptBlock {
     Add-Computer @Params
 }
 
-Start-Sleep -Seconds 10
+#Wait for FS01 to respond to PowerShell Direct
+Write-Host "Wait for FS01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
+while ((icm -VMName FS01 -Credential $localcred {“Test”} -ea SilentlyContinue) -ne “Test”) {Sleep -Seconds 1}
+
+#FS01 Networking and domain join
+Write-Host "FS01 Networking and domain join" -ForegroundColor Green -BackgroundColor Black
+Invoke-Command -Credential $localcred -VMName FS01 -ScriptBlock {
+    #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
+    $Params = @{
+        IPAddress = "192.168.10.13"
+        DefaultGateway = "192.168.10.1"
+        PrefixLength = "24"
+        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
+    }
+    New-NetIPAddress @Params
+
+    #Configure DNS Settings
+    $Params = @{
+        ServerAddresses = "192.168.10.10"
+        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
+    }
+    Set-DNSClientServerAddress @Params
+
+
+    $usr = "ad\Administrator"
+    $pwd = ConvertTo-SecureString "1Password" -AsPlainText -Force
+    $cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $usr, $pwd
+    $Params = @{
+	    DomainName = "ad.contoso.com"
+	    OUPath = "OU=Servers,OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
+	    Credential = $cred
+	    Force = $true
+	    Restart = $true
+    }
+    Add-Computer @Params
+}
+
 
 #Wait for DHCP to respond to PowerShell Direct
 Write-Host "Wait for DHCP to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
@@ -824,45 +860,6 @@ Invoke-Command -Credential $domaincred -VMName DHCP -ScriptBlock {
     Write-Host "Specify default DNS server" -ForegroundColor Blue -BackgroundColor Black
     Set-DhcpServerv4OptionValue -DnsDomain ad.contoso.com -DnsServer 192.168.10.10
 }
-
-#Wait for FS01 to respond to PowerShell Direct
-Write-Host "Wait for FS01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((icm -VMName FS01 -Credential $localcred {“Test”} -ea SilentlyContinue) -ne “Test”) {Sleep -Seconds 1}
-
-#FS01 Networking and domain join
-Write-Host "FS01 Networking and domain join" -ForegroundColor Green -BackgroundColor Black
-Invoke-Command -Credential $localcred -VMName FS01 -ScriptBlock {
-    #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
-    $Params = @{
-        IPAddress = "192.168.10.13"
-        DefaultGateway = "192.168.10.1"
-        PrefixLength = "24"
-        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
-    }
-    New-NetIPAddress @Params
-
-    #Configure DNS Settings
-    $Params = @{
-        ServerAddresses = "192.168.10.10"
-        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
-    }
-    Set-DNSClientServerAddress @Params
-
-
-    $usr = "ad\Administrator"
-    $pwd = ConvertTo-SecureString "1Password" -AsPlainText -Force
-    $cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $usr, $pwd
-    $Params = @{
-	    DomainName = "ad.contoso.com"
-	    OUPath = "OU=Servers,OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
-	    Credential = $cred
-	    Force = $true
-	    Restart = $true
-    }
-    Add-Computer @Params
-}
-
-Start-Sleep -Seconds 10
 
 #Wait for FS01 to respond to PowerShell Direct
 Write-Host "Wait for FS01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
