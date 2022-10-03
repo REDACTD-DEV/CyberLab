@@ -613,7 +613,7 @@ $VMConfigs = @(
     [PSCustomObject]@{Name = "CL01"; IP = "192.168.10.50/24"; MAC = "00155da182d5"; Script = "CL01.ps1"; Type = "Client"}
 )
 
-function Create-CustomVM {
+function New-CustomVM {
 	[CmdletBinding()]
 	param(
 		[Parameter()]
@@ -639,8 +639,6 @@ function Create-CustomVM {
         New-VM @Params
 
         Set-VMNetworkAdapter -VMName $VMName -StaticMacAddress $MAC
-        #Add hyphens to the MAC address for later
-        $XMLMAC = ($MAC -replace '..(?!$)','$&-').ToUpper()
 
         #Edit VM
         $Params = @{
@@ -741,21 +739,21 @@ function Create-CustomVM {
 
 }
 Write-Host "Deploy DC01" -ForegroundColor Green -BackgroundColor Black
-Create-CustomVM -VMName $VMConfigs.Name[0] -IP $VMConfigs.IP[0] -MAC $VMConfigs.MAC[0] -Script $VMConfigs.Script[0]
+New-CustomVM -VMName $VMConfigs.Name[0] -IP $VMConfigs.IP[0] -MAC $VMConfigs.MAC[0] -Script $VMConfigs.Script[0]
 Write-Host "Deploy DHCP" -ForegroundColor Green -BackgroundColor Black
-Create-CustomVM -VMName $VMConfigs.Name[1] -IP $VMConfigs.IP[1] -MAC $VMConfigs.MAC[1] -Script $VMConfigs.Script[1]
+New-CustomVM -VMName $VMConfigs.Name[1] -IP $VMConfigs.IP[1] -MAC $VMConfigs.MAC[1] -Script $VMConfigs.Script[1]
 Write-Host "Deploy FS01" -ForegroundColor Green -BackgroundColor Black
-Create-CustomVM -VMName $VMConfigs.Name[2] -IP $VMConfigs.IP[2] -MAC $VMConfigs.MAC[2] -Script $VMConfigs.Script[2]
+New-CustomVM -VMName $VMConfigs.Name[2] -IP $VMConfigs.IP[2] -MAC $VMConfigs.MAC[2] -Script $VMConfigs.Script[2]
 
 $localusr = "Administrator"
 $domainusr = "ad\Administrator"
-$pwd = ConvertTo-SecureString "1Password" -AsPlainText -Force
-$localcred = new-object -typename System.Management.Automation.PSCredential -argumentlist $localusr, $pwd
-$domaincred = new-object -typename System.Management.Automation.PSCredential -argumentlist $domainusr, $pwd
+$password = ConvertTo-SecureString "1Password" -AsPlainText -Force
+$localcred = new-object -typename System.Management.Automation.PSCredential -argumentlist $localusr, $password
+$domaincred = new-object -typename System.Management.Automation.PSCredential -argumentlist $domainusr, $password
 
 #Wait for DC01 to respond to PowerShell Direct
 Write-Host "Wait for DC01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((icm -VMName DC01 -Credential $localcred {“Test”} -ea SilentlyContinue) -ne “Test”) {Sleep -Seconds 1}
+while ((Invoke-Command -VMName DC01 -Credential $localcred {“Test”} -ea SilentlyContinue) -ne “Test”) {Start-Sleep -Seconds 1}
 
 #Configure Networking and install AD DS on DC01
 Invoke-Command -VMName DC01 -Credential $localcred -ScriptBlock {
@@ -786,7 +784,7 @@ Start-Sleep -Seconds 10
 
 #Wait for DC01 to respond to PowerShell Direct
 Write-Host "Wait for DC01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((icm -VMName DC01 -Credential $domaincred {“Test”} -ea SilentlyContinue) -ne “Test”) {Sleep -Seconds 1}
+while ((Invoke-Command -VMName DC01 -Credential $domaincred {“Test”} -ea SilentlyContinue) -ne “Test”) {Start-Sleep -Seconds 1}
 
 #Wait for Active Directory Web Services to come online
 Write-Host "Wait for Active Directory Web Services to come online" -ForegroundColor Green -BackgroundColor Black
@@ -859,7 +857,7 @@ Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
 
 #Wait for DHCP to respond to PowerShell Direct
 Write-Host "Wait for DHCP to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((icm -VMName DHCP -Credential $localcred {“Test”} -ea SilentlyContinue) -ne “Test”) {Sleep -Seconds 1}
+while ((Invoke-Command -VMName DHCP -Credential $localcred {“Test”} -ea SilentlyContinue) -ne “Test”) {Start-Sleep -Seconds 1}
 
 #DHCP configure networking and domain join
 Write-Host "DC01 postinstall script" -ForegroundColor Green -BackgroundColor Black
@@ -882,8 +880,8 @@ Invoke-Command -Credential $domaincred -VMName DHCP -ScriptBlock {
 
 
     $usr = "ad\Administrator"
-    $pwd = ConvertTo-SecureString "1Password" -AsPlainText -Force
-    $cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $usr, $pwd
+    $password = ConvertTo-SecureString "1Password" -AsPlainText -Force
+    $cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $usr, $password
     $Params = @{
 	    DomainName = "ad.contoso.com"
 	    OUPath = "OU=Servers,OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
@@ -896,7 +894,7 @@ Invoke-Command -Credential $domaincred -VMName DHCP -ScriptBlock {
 
 #Wait for FS01 to respond to PowerShell Direct
 Write-Host "Wait for FS01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((icm -VMName FS01 -Credential $localcred {“Test”} -ea SilentlyContinue) -ne “Test”) {Sleep -Seconds 1}
+while ((Invoke-Command -VMName FS01 -Credential $localcred {“Test”} -ea SilentlyContinue) -ne “Test”) {Start-Sleep -Seconds 1}
 
 #FS01 Networking and domain join
 Write-Host "FS01 Networking and domain join" -ForegroundColor Green -BackgroundColor Black
@@ -919,8 +917,8 @@ Invoke-Command -Credential $localcred -VMName FS01 -ScriptBlock {
 
 
     $usr = "ad\Administrator"
-    $pwd = ConvertTo-SecureString "1Password" -AsPlainText -Force
-    $cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $usr, $pwd
+    $password = ConvertTo-SecureString "1Password" -AsPlainText -Force
+    $cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $usr, $password
     $Params = @{
 	    DomainName = "ad.contoso.com"
 	    OUPath = "OU=Servers,OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
@@ -934,7 +932,7 @@ Invoke-Command -Credential $localcred -VMName FS01 -ScriptBlock {
 
 #Wait for DHCP to respond to PowerShell Direct
 Write-Host "Wait for DHCP to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((icm -VMName DHCP -Credential $domaincred {“Test”} -ea SilentlyContinue) -ne “Test”) {Sleep -Seconds 1}
+while ((Invoke-Command -VMName DHCP -Credential $domaincred {“Test”} -ea SilentlyContinue) -ne “Test”) {Start-Sleep -Seconds 1}
 
 #DHCP postinstall script
 Write-Host "DHCP postinstall script" -ForegroundColor Green -BackgroundColor Black
@@ -980,7 +978,7 @@ Invoke-Command -Credential $domaincred -VMName DHCP -ScriptBlock {
 
 #Wait for FS01 to respond to PowerShell Direct
 Write-Host "Wait for FS01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((icm -VMName FS01 -Credential $domaincred {“Test”} -ea SilentlyContinue) -ne “Test”) {Sleep -Seconds 1}
+while ((Invoke-Command -VMName FS01 -Credential $domaincred {“Test”} -ea SilentlyContinue) -ne “Test”) {Start-Sleep -Seconds 1}
 
 #FS01 post-install
 Write-Host "FS01 post-install" -ForegroundColor Green -BackgroundColor Black
@@ -1019,7 +1017,7 @@ Invoke-Command -Credential $domaincred -VMName FS01 -ScriptBlock {
 
 #Wait for DC01 to respond to PowerShell Direct
 Write-Host "Wait for DC01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((icm -VMName DC01 -Credential $domaincred {“Test”} -ea SilentlyContinue) -ne “Test”) {Sleep -Seconds 1}
+while ((Invoke-Command -VMName DC01 -Credential $domaincred {“Test”} -ea SilentlyContinue) -ne “Test”) {Start-Sleep -Seconds 1}
 
 #Group policy configuration
 Write-Host "Group policy configuration" -ForegroundColor Green -BackgroundColor Black
