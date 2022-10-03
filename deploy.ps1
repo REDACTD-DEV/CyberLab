@@ -656,7 +656,7 @@ function New-CustomVM {
         Write-Host "Running New-VM for $VMName" -ForegroundColor Magenta -BackgroundColor Black
         $Params = @{
             Name = $VMName
-            MemoryStartupBytes = 1GB
+            MemoryStartupBytes = 2GB
             Path = "E:\$VMName"
             Generation = 2
             SwitchName = "Default Switch"
@@ -673,8 +673,8 @@ function New-CustomVM {
             Name = $VMName
             ProcessorCount = 4
             DynamicMemory = $true
-            MemoryMinimumBytes = 1GB
-            MemoryMaximumBytes = 4GB
+            MemoryMinimumBytes = 2GB
+            MemoryMaximumBytes = 8GB
         }
         Set-VM @Params
 
@@ -731,7 +731,7 @@ function New-CustomVM {
         Write-Host "Create OS disk for $VMName" -ForegroundColor Magenta -BackgroundColor Black
         $Params = @{
             Path = "E:\$VMName\Virtual Hard Disks\$VMName-OS.vhdx"
-            SizeBytes = 60GB
+            SizeBytes = 100GB
             Dynamic = $true
         }
         New-VHD @Params
