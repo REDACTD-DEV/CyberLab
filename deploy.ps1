@@ -344,8 +344,8 @@ New-ISOFile -source "E:\WinClientISOBuild" -destinationISO $WinClientAutoISO -bo
 
 #Cleanup
 Write-Host "Dismount ISO" -ForegroundColor Green -BackgroundColor Black
-Dismount-DiskImage -ImagePath $WinServerISO
-#Remove-Item -Recurse -Path "E:\WinServerISOBuild"
+Dismount-DiskImage -ImagePath $WinClientISO
+#Remove-Item -Recurse -Path "E:\WinClientISOBuild"
 
 #Create folder for autounattend ISO
 Write-Host "Create folder for autounattend ISO" -ForegroundColor Green -BackgroundColor Black
