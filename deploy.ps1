@@ -796,8 +796,10 @@ Write-Host "Wait for DC01 to respond to PowerShell Direct" -ForegroundColor Gree
 while ((Invoke-Command -VMName DC01 -Credential $localcred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 1}
 
 #Configure Networking and install AD DS on DC01
+Write-Host "Configure Networking and install AD DS on DC01" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -VMName DC01 -Credential $localcred -ScriptBlock {
     #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
+    Write-Host "Set IP Address" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         IPAddress = "192.168.10.10"
         DefaultGateway = "192.168.10.1"
@@ -806,6 +808,7 @@ Invoke-Command -VMName DC01 -Credential $localcred -ScriptBlock {
     }
     New-NetIPAddress @Params
 
+    Write-Host "Set DNS" -ForegroundColor Blue -BackgroundColor Black
     #Configure DNS Settings
     $Params = @{
         ServerAddresses = "192.168.10.10"
@@ -814,9 +817,11 @@ Invoke-Command -VMName DC01 -Credential $localcred -ScriptBlock {
     Set-DNSClientServerAddress @Params
 
     #Install AD DS server role
+    Write-Host "Install AD DS Server Role" -ForegroundColor Blue -BackgroundColor Black
     Install-WindowsFeature -name AD-Domain-Services -IncludeManagementTools
 
     #Configure server as a domain controller
+    Write-Host "Configure server as a domain controller" -ForegroundColor Blue -BackgroundColor Black
     Install-ADDSForest -DomainName ad.contoso.com -DomainNetBIOSName AD -InstallDNS -Force -SafeModeAdministratorPassword (ConvertTo-SecureString "1Password" -AsPlainText -Force)
 }
 
@@ -832,13 +837,20 @@ Invoke-Command -VMName DC01 -Credential $domaincred -ScriptBlock {
     Write-Verbose "Waiting for AD Web Services to be in a running state" -Verbose
     $ADWebSvc = Get-Service ADWS | Select-Object *
     while($ADWebSvc.Status -ne 'Running')
-            {
-            Start-Sleep -Seconds 1
-            }
-            #Sleep to make sure ADWS is actually up
-            Start-Sleep -Seconds 30 
-            Write-Host "ADWS is primed" -ForegroundColor Blue -BackgroundColor Black
+        {
+        Start-Sleep -Seconds 1
+        }
+    #Sleep to make sure ADWS is actually up
+    Write-Host "ADWS is primed" -ForegroundColor Blue -BackgroundColor Black
 	}
+
+Invoke-Command -VMName DC01 -Credential $domaincred -ScriptBlock {
+    while (-not (Test-Path \\localhost\c$)) {
+        Start-Sleep 5
+        Write-Host "C$ Not up yet..."
+    }
+Write-host "C$ is up, Machine is good to go"
+}
 
 #DC01 postinstall script
 Write-Host "DC01 postinstall script" -ForegroundColor Green -BackgroundColor Black
