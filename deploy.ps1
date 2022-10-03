@@ -840,16 +840,15 @@ Invoke-Command -VMName DC01 -Credential $domaincred -ScriptBlock {
         {
         Start-Sleep -Seconds 1
         }
-    #Sleep to make sure ADWS is actually up
     Write-Host "ADWS is primed" -ForegroundColor Blue -BackgroundColor Black
 	}
 
 Invoke-Command -VMName DC01 -Credential $domaincred -ScriptBlock {
-    while (-not (Test-Path \\localhost\c$)) {
+    while ($winlogon -eq $null) {
         Start-Sleep 5
-        Write-Host "C$ Not up yet..."
+        Write-Host "winlogon not up yet..."
     }
-Write-host "C$ is up, Machine is good to go"
+Write-host "winlogon is up, server is good to go"
 }
 
 #DC01 postinstall script
