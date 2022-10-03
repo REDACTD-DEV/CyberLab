@@ -844,12 +844,12 @@ Invoke-Command -VMName DC01 -Credential $domaincred -ScriptBlock {
 	}
 
 Invoke-Command -VMName DC01 -Credential $domaincred -ScriptBlock {
-    $SR = Get-Service | Where-Object Name -eq StateRepository | Select-Object *
-    while ($SR.Status -eq "Stopped") {
+    $LogonUI = Get-Process | Where-Object ProcessName -eq "LogonUI"
+    while ($SR.Status -ne $null) {
         Start-Sleep 5
-        Write-Host "SR not up yet..."
+        Write-Host "LogonUI still processing..."
     }
-Write-host "SR is up, server is good to go"
+Write-host "LogonUI is down! Server is good to go!"
 }
 
 #DC01 postinstall script
