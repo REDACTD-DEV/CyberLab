@@ -753,13 +753,13 @@ function New-CustomVM {
 
 }
 Write-Host "Deploy DC01" -ForegroundColor Green -BackgroundColor Black
-New-CustomVM -VMName $VMConfigs.Name[0] -IP $VMConfigs.IP[0] -MAC $VMConfigs.MAC[0] -Script $VMConfigs.Script[0]
+New-CustomVM -VMName $VMConfigs.Name[0] -IP $VMConfigs.IP[0] -MAC $VMConfigs.MAC[0] -Script $VMConfigs.Script[0] -Type $VMConfigs.Type[0]
 Write-Host "Deploy DHCP" -ForegroundColor Green -BackgroundColor Black
-New-CustomVM -VMName $VMConfigs.Name[1] -IP $VMConfigs.IP[1] -MAC $VMConfigs.MAC[1] -Script $VMConfigs.Script[1]
+New-CustomVM -VMName $VMConfigs.Name[1] -IP $VMConfigs.IP[1] -MAC $VMConfigs.MAC[1] -Script $VMConfigs.Script[1] -Type $VMConfigs.Type[1]
 Write-Host "Deploy FS01" -ForegroundColor Green -BackgroundColor Black
-New-CustomVM -VMName $VMConfigs.Name[2] -IP $VMConfigs.IP[2] -MAC $VMConfigs.MAC[2] -Script $VMConfigs.Script[2]
+New-CustomVM -VMName $VMConfigs.Name[2] -IP $VMConfigs.IP[2] -MAC $VMConfigs.MAC[2] -Script $VMConfigs.Script[2] -Type $VMConfigs.Type[2]
 Write-Host "Deploy CL01" -ForegroundColor Green -BackgroundColor Black
-New-CustomVM -VMName $VMConfigs.Name[4] -IP $VMConfigs.IP[4] -MAC $VMConfigs.MAC[4] -Script $VMConfigs.Script[4]
+New-CustomVM -VMName $VMConfigs.Name[4] -IP $VMConfigs.IP[4] -MAC $VMConfigs.MAC[4] -Script $VMConfigs.Script[4] -Type $VMConfigs.Type[4]
 
 
 $localusr = "Administrator"
