@@ -756,7 +756,7 @@ $domaincred = new-object -typename System.Management.Automation.PSCredential -ar
 
 #Wait for DC01 to respond to PowerShell Direct
 Write-Host "Wait for DC01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((Invoke-Command -VMName DC01 -Credential $localcred {“Test”} -ea SilentlyContinue) -ne “Test”) {Start-Sleep -Seconds 1}
+while ((Invoke-Command -VMName DC01 -Credential $localcred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 1}
 
 #Configure Networking and install AD DS on DC01
 Invoke-Command -VMName DC01 -Credential $localcred -ScriptBlock {
@@ -787,7 +787,7 @@ Start-Sleep -Seconds 10
 
 #Wait for DC01 to respond to PowerShell Direct
 Write-Host "Wait for DC01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((Invoke-Command -VMName DC01 -Credential $domaincred {“Test”} -ea SilentlyContinue) -ne “Test”) {Start-Sleep -Seconds 1}
+while ((Invoke-Command -VMName DC01 -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 1}
 
 #Wait for Active Directory Web Services to come online
 Write-Host "Wait for Active Directory Web Services to come online" -ForegroundColor Green -BackgroundColor Black
@@ -809,19 +809,19 @@ Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
     #Create OU's
     Write-Host "Create OU's" -ForegroundColor Blue -BackgroundColor Black
     #Base OU
-    New-ADOrganizationalUnit “Contoso” –path “DC=ad,DC=contoso,DC=com”
+    New-ADOrganizationalUnit "Contoso" –path "DC=ad,DC=contoso,DC=com"
     #Devices
-    New-ADOrganizationalUnit “Devices” –path “OU=Contoso,DC=ad,DC=contoso,DC=com”
-    New-ADOrganizationalUnit “Servers” –path “OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com”
-    New-ADOrganizationalUnit “Workstations” –path “OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com”
+    New-ADOrganizationalUnit "Devices" –path "OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit "Servers" –path "OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit "Workstations" –path "OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
     #Users
-    New-ADOrganizationalUnit “Users” –path “OU=Contoso,DC=ad,DC=contoso,DC=com”
-    New-ADOrganizationalUnit “Admins” –path “OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com”
-    New-ADOrganizationalUnit “Employees” –path “OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com”
+    New-ADOrganizationalUnit "Users" –path "OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit "Admins" –path "OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit "Employees" –path "OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com"
     #Groups
-    New-ADOrganizationalUnit “Groups” –path “OU=Contoso,DC=ad,DC=contoso,DC=com”
-    New-ADOrganizationalUnit “SecurityGroups” –path “OU=Groups,OU=Contoso,DC=ad,DC=contoso,DC=com”
-    New-ADOrganizationalUnit “DistributionLists” –path “OU=Groups,OU=Contoso,DC=ad,DC=contoso,DC=com”
+    New-ADOrganizationalUnit "Groups" –path "OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit "SecurityGroups" –path "OU=Groups,OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit "DistributionLists" –path "OU=Groups,OU=Contoso,DC=ad,DC=contoso,DC=com"
     #New admin user
     Write-Host "New admin user" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
@@ -830,7 +830,7 @@ Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
         Enabled = $true
         ChangePasswordAtLogon = $true
         DisplayName = "John Smith - Admin"
-        Path = “OU=Admins,OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com”
+        Path = "OU=Admins,OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com"
     }
     New-ADUser @Params
     #Add admin to Domain Admins group
@@ -846,7 +846,7 @@ Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
         DisplayName = "John Smith"
         Company = "Contoso"
         Department = "Information Technology"
-        Path = “OU=Employees,OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com”
+        Path = "OU=Employees,OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com"
     }
     New-ADUser @Params
     #Will have issues logging in through Hyper-V Enhanced Session Mode if not in this group
@@ -860,7 +860,7 @@ Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
 
 #Wait for DHCP to respond to PowerShell Direct
 Write-Host "Wait for DHCP to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((Invoke-Command -VMName DHCP -Credential $localcred {“Test”} -ea SilentlyContinue) -ne “Test”) {Start-Sleep -Seconds 1}
+while ((Invoke-Command -VMName DHCP -Credential $localcred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 1}
 
 #DHCP configure networking and domain join
 Write-Host "DC01 postinstall script" -ForegroundColor Green -BackgroundColor Black
@@ -897,7 +897,7 @@ Invoke-Command -Credential $domaincred -VMName DHCP -ScriptBlock {
 
 #Wait for FS01 to respond to PowerShell Direct
 Write-Host "Wait for FS01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((Invoke-Command -VMName FS01 -Credential $localcred {“Test”} -ea SilentlyContinue) -ne “Test”) {Start-Sleep -Seconds 1}
+while ((Invoke-Command -VMName FS01 -Credential $localcred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 1}
 
 #FS01 Networking and domain join
 Write-Host "FS01 Networking and domain join" -ForegroundColor Green -BackgroundColor Black
@@ -935,7 +935,7 @@ Invoke-Command -Credential $localcred -VMName FS01 -ScriptBlock {
 
 #Wait for DHCP to respond to PowerShell Direct
 Write-Host "Wait for DHCP to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((Invoke-Command -VMName DHCP -Credential $domaincred {“Test”} -ea SilentlyContinue) -ne “Test”) {Start-Sleep -Seconds 1}
+while ((Invoke-Command -VMName DHCP -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 1}
 
 #DHCP postinstall script
 Write-Host "DHCP postinstall script" -ForegroundColor Green -BackgroundColor Black
@@ -981,7 +981,7 @@ Invoke-Command -Credential $domaincred -VMName DHCP -ScriptBlock {
 
 #Wait for FS01 to respond to PowerShell Direct
 Write-Host "Wait for FS01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((Invoke-Command -VMName FS01 -Credential $domaincred {“Test”} -ea SilentlyContinue) -ne “Test”) {Start-Sleep -Seconds 1}
+while ((Invoke-Command -VMName FS01 -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 1}
 
 #FS01 post-install
 Write-Host "FS01 post-install" -ForegroundColor Green -BackgroundColor Black
@@ -1020,7 +1020,7 @@ Invoke-Command -Credential $domaincred -VMName FS01 -ScriptBlock {
 
 #Wait for DC01 to respond to PowerShell Direct
 Write-Host "Wait for DC01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((Invoke-Command -VMName DC01 -Credential $domaincred {“Test”} -ea SilentlyContinue) -ne “Test”) {Start-Sleep -Seconds 1}
+while ((Invoke-Command -VMName DC01 -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 1}
 
 #Group policy configuration
 Write-Host "Group policy configuration" -ForegroundColor Green -BackgroundColor Black
