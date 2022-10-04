@@ -1262,10 +1262,10 @@ Invoke-Command -Credential $domaincred -VMName DC02 -ScriptBlock {
     Start-Sleep -Seconds 2
     $Params = @{
         CloneComputerName   =   "DC03"
-        #Static              =   $true
-        #IPv4Address         =   "192.168.10.12"
-        #IPv4SubnetMask      =   "255.255.255.0"
-        #IPv4DefaultGateway  =   "192.168.10.1"
+        Static              =   $true
+        IPv4Address         =   "192.168.10.12"
+        IPv4SubnetMask      =   "255.255.255.0"
+        IPv4DefaultGateway  =   "192.168.10.1"
         IPv4DNSResolver     =   "192.168.10.10"
     }
     New-ADDCCloneConfigFile @Params | Out-Null
