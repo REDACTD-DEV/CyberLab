@@ -288,17 +288,17 @@ $adapter = Get-NetAdapter -InterfaceAlias "vEthernet (Default Switch)"
 # Remove any existing IP
 Write-Host "Remove any existing IP" -ForegroundColor Green -BackgroundColor Black
 If (($adapter | Get-NetIPConfiguration).IPv4Address.IPAddress) {
- $adapter | Remove-NetIPAddress -AddressFamily $IPType -Confirm:$false
+ $adapter | Remove-NetIPAddress -AddressFamily $IPType -Confirm:$false | Out-Null
 }
 
 #Removing any previous IP Address Gateway.
 Write-Host "Removing any previous IP Address Gateway" -ForegroundColor Green -BackgroundColor Black
 If (($adapter | Get-NetIPConfiguration).Ipv4DefaultGateway) {
- $adapter | Remove-NetRoute -AddressFamily $IPType -Confirm:$false
+ $adapter | Remove-NetRoute -AddressFamily $IPType -Confirm:$false | Out-Null
 }
  #Configure the IP address and default gateway
 Write-Host "Configure the IP address and default gateway" -ForegroundColor Green -BackgroundColor Black
-$adapter | New-NetIPAddress -AddressFamily $IPType -IPAddress $IP -PrefixLength $MaskBits -DefaultGateway $Gateway
+$adapter | New-NetIPAddress -AddressFamily $IPType -IPAddress $IP -PrefixLength $MaskBits -DefaultGateway $Gateway | Out-Null
 
 # Configure the DNS client server IP addresses
 Write-Host "Configure the DNS client server IP addresses" -ForegroundColor Green -BackgroundColor Black
@@ -311,45 +311,45 @@ $WinClientAutoISO = "E:\ISO\Windows-auto.iso"
 
 #Mount WinServer ISO
 Write-Host "Mount WinServer ISO" -ForegroundColor Green -BackgroundColor Black
-Mount-DiskImage -ImagePath $WinServerISO
+Mount-DiskImage -ImagePath $WinServerISO | Out-Null
 
 #Copy WinServer ISO
 Write-Host "Copy ISO" -ForegroundColor Green -BackgroundColor Black
 $Path = (Get-DiskImage -ImagePath $WinServerISO | Get-Volume).DriveLetter + ":\"
-New-Item -Type Directory -Path "E:\WinServerISOBuild"
-Copy-Item -Path $Path* -Destination "E:\WinServerISOBuild" -Recurse
+New-Item -Type Directory -Path "E:\WinServerISOBuild" | Out-Null
+Copy-Item -Path $Path* -Destination "E:\WinServerISOBuild" -Recurse | Out-Null
 
 #Create WinServer ISO
 Write-Host "Create WinServer ISO" -ForegroundColor Green -BackgroundColor Black
-New-ISOFile -source "E:\WinServerISOBuild" -destinationISO $WinServerAutoISO -bootfile "E:\WinServerISOBuild\efi\microsoft\boot\efisys_noprompt.bin" -title "WINSERVER-22-Auto" -Verbose
+New-ISOFile -source "E:\WinServerISOBuild" -destinationISO $WinServerAutoISO -bootfile "E:\WinServerISOBuild\efi\microsoft\boot\efisys_noprompt.bin" -title "WINSERVER-22-Auto" -Verbose | Out-Null
 
 #Cleanup
 Write-Host "Dismount ISO" -ForegroundColor Green -BackgroundColor Black
-Dismount-DiskImage -ImagePath $WinServerISO
+Dismount-DiskImage -ImagePath $WinServerISO | Out-Null
 #Remove-Item -Recurse -Path "E:\WinServerISOBuild"
 
 #Mount WinClient ISO
 Write-Host "Mount WinClient ISO" -ForegroundColor Green -BackgroundColor Black
-Mount-DiskImage -ImagePath $WinClientISO
+Mount-DiskImage -ImagePath $WinClientISO | Out-Null
 
 #Copy WinClient ISO
 Write-Host "Copy WinClient ISO" -ForegroundColor Green -BackgroundColor Black
 $Path = (Get-DiskImage -ImagePath $WinClientISO | Get-Volume).DriveLetter + ":\"
-New-Item -Type Directory -Path "E:\WinClientISOBuild"
-Copy-Item -Path $Path* -Destination "E:\WinClientISOBuild" -Recurse
+New-Item -Type Directory -Path "E:\WinClientISOBuild" | Out-Null
+Copy-Item -Path $Path* -Destination "E:\WinClientISOBuild" -Recurse | Out-Null
 
 #Create WinClient ISO
 Write-Host "Create WinClient ISO" -ForegroundColor Green -BackgroundColor Black
-New-ISOFile -source "E:\WinClientISOBuild" -destinationISO $WinClientAutoISO -bootfile "E:\WinClientISOBuild\efi\microsoft\boot\efisys_noprompt.bin" -title "WINClient-22-Auto" -Verbose
+New-ISOFile -source "E:\WinClientISOBuild" -destinationISO $WinClientAutoISO -bootfile "E:\WinClientISOBuild\efi\microsoft\boot\efisys_noprompt.bin" -title "WINClient-22-Auto" -Verbose | Out-Null
 
 #Cleanup
 Write-Host "Dismount ISO" -ForegroundColor Green -BackgroundColor Black
-Dismount-DiskImage -ImagePath $WinClientISO
+Dismount-DiskImage -ImagePath $WinClientISO | Out-Null
 #Remove-Item -Recurse -Path "E:\WinClientISOBuild"
 
 #Create folder for autounattend ISO
 Write-Host "Create folder for autounattend ISO" -ForegroundColor Green -BackgroundColor Black
-New-Item -Type Directory -Path "E:\autounattend"
+New-Item -Type Directory -Path "E:\autounattend" | Out-Null
 
 #Create base  server-autounattend.xml file
 Write-Host "Create base autounattend.xml file" -ForegroundColor Green -BackgroundColor Black
@@ -513,7 +513,7 @@ $data = @"
 </unattend>
 "@
 #Write XML
-$data | out-file "E:\autounattend\server-autounattend.xml" -Encoding "utf8"
+$data | out-file "E:\autounattend\server-autounattend.xml" -Encoding "utf8" | Out-Null
 
 
 #Create base  server-autounattend.xml file
@@ -610,7 +610,7 @@ $data = @"
         <Enabled>true</Enabled>
         <LogonCount>1</LogonCount>
         <Password>
-          <Value>password</Value>
+          <Value>1Password</Value>
           <PlainText>true</PlainText>
         </Password>
       </AutoLogon>
@@ -624,7 +624,7 @@ $data = @"
 </unattend>
 "@
 #Write XML
-$data | out-file "E:\autounattend\client-autounattend.xml" -Encoding "utf8"
+$data | out-file "E:\autounattend\client-autounattend.xml" -Encoding "utf8" | Out-Null
 
 
 ## Deploy VMs
@@ -656,7 +656,7 @@ function New-CustomVM {
             Generation = 2
             SwitchName = "Default Switch"
         }
-        New-VM @Params
+        New-VM @Params | Out-Null
 
         #Edit VM
         Write-Host "Running Set-VM for $VMName" -ForegroundColor Magenta -BackgroundColor Black
@@ -667,7 +667,7 @@ function New-CustomVM {
             MemoryMinimumBytes = 2GB
             MemoryMaximumBytes = 8GB
         }
-        Set-VM @Params
+        Set-VM @Params | Out-Null
 
         #Specify CPU settings
         Write-Host "Running Set-VMProcessor for $VMName" -ForegroundColor Magenta -BackgroundColor Black
@@ -677,7 +677,7 @@ function New-CustomVM {
             Maximum = 100
             RelativeWeight = 100
         }
-        Set-VMProcessor @Params
+        Set-VMProcessor @Params | Out-Null
 
         #Add Installer ISO
         Write-Host "Setting Install ISO for $VMName" -ForegroundColor Magenta -BackgroundColor Black
@@ -687,28 +687,28 @@ function New-CustomVM {
         }
         if($VMName -eq "CL01") {$Params['Path'] = "E:\ISO\Windows-auto.iso"}
         if($VMName -eq "pfSense") {$Params['Path'] = "E:\ISO\pfSense.iso"}
-        Add-VMDvdDrive @Params
+        Add-VMDvdDrive @Params | Out-Null
 
         #Copy autounattend.xml to VM Folder
         New-Item -ItemType Directory E:\$VMName\autounattend\
         Write-Host "Copying autounattend.xml for $VMName" -ForegroundColor Magenta -BackgroundColor Black
         if ($Type -eq "Client") {
-        Copy-Item -Path "E:\autounattend\client-autounattend.xml" -Destination E:\$VMName\autounattend\autounattend.xml
+        Copy-Item -Path "E:\autounattend\client-autounattend.xml" -Destination E:\$VMName\autounattend\autounattend.xml | Out-Null
         }
         if ($Type -eq "Server") {
-        Copy-Item -Path "E:\autounattend\server-autounattend.xml" -Destination E:\$VMName\autounattend\autounattend.xml
+        Copy-Item -Path "E:\autounattend\server-autounattend.xml" -Destination E:\$VMName\autounattend\autounattend.xml | Out-Null
         }
 
         #Customize autounattend.xml for each VM
         Write-Host "Customizing autounattend.xml for $VMName" -ForegroundColor Magenta -BackgroundColor Black
-        (Get-Content "E:\$VMName\autounattend\autounattend.xml").replace("1ComputerName", $VMName) | Set-Content "E:\$VMName\autounattend\autounattend.xml"
+        (Get-Content "E:\$VMName\autounattend\autounattend.xml").replace("1ComputerName", $VMName) | Set-Content "E:\$VMName\autounattend\autounattend.xml" | Out-Null
 
         #Create the ISO
         Write-Host "Creating autounattend ISO for $VMName" -ForegroundColor Magenta -BackgroundColor Black
-        New-ISOFile -source "E:\$VMName\autounattend\" -destinationIso "E:\$VMName\autounattend.iso" -title autounattend -Verbose
+        New-ISOFile -source "E:\$VMName\autounattend\" -destinationIso "E:\$VMName\autounattend.iso" -title autounattend -Verbose | Out-Null
 
         #Cleanup
-        Remove-Item -Recurse -Path "E:\$VMName\autounattend\"
+        Remove-Item -Recurse -Path "E:\$VMName\autounattend\" | Out-Null
 
         #Add autounattend ISO
         Write-Host "Attaching autounattend ISO to $VMName" -ForegroundColor Magenta -BackgroundColor Black
@@ -716,7 +716,7 @@ function New-CustomVM {
             VMName = $VMName
             Path = "E:\$VMName\autounattend.iso"
         }
-        Add-VMDvdDrive @Params
+        Add-VMDvdDrive @Params | Out-Null
 
         #Create OS Drive
         Write-Host "Create OS disk for $VMName" -ForegroundColor Magenta -BackgroundColor Black
@@ -725,7 +725,7 @@ function New-CustomVM {
             SizeBytes = 100GB
             Dynamic = $true
         }
-        New-VHD @Params
+        New-VHD @Params | Out-Null
 
         #Create Data Drive
         Write-Host "Create data disk for $VMName" -ForegroundColor Magenta -BackgroundColor Black
@@ -734,7 +734,7 @@ function New-CustomVM {
             SizeBytes = 500GB
             Dynamic = $true
         }
-        New-VHD @Params
+        New-VHD @Params | Out-Null
 
         #Add OS Drive to VM
         Write-Host "Attach OS disk for $VMName" -ForegroundColor Magenta -BackgroundColor Black
@@ -742,7 +742,7 @@ function New-CustomVM {
             VMName = $VMName
             Path = "E:\$VMName\Virtual Hard Disks\$VMName-OS.vhdx"
         }
-        Add-VMHardDiskDrive @Params
+        Add-VMHardDiskDrive @Params | Out-Null
 
         #Add Data Drive to VM
         Write-Host "Attach data disk for $VMName" -ForegroundColor Magenta -BackgroundColor Black
@@ -750,7 +750,7 @@ function New-CustomVM {
             VMName = $VMName
             Path = "E:\$VMName\Virtual Hard Disks\$VMName-Data.vhdx"
         }
-        Add-VMHardDiskDrive @Params
+        Add-VMHardDiskDrive @Params | Out-Null
 
         #Set boot priority
         Write-Host "Set boot priority for $VMName" -ForegroundColor Magenta -BackgroundColor Black
@@ -759,23 +759,23 @@ function New-CustomVM {
         $Order3 = Get-VMHardDiskDrive -VMName $VMName | Where-Object Path -Match "Data"
         $Order4 = Get-VMDvdDrive -VMName $VMName | Where-Object Path  -Match "unattend"
         $Order5 = Get-VMNetworkAdapter -VMName $VMName
-        Set-VMFirmware -VMName $VMName -BootOrder $Order1, $Order2, $Order3, $Order4, $Order5
+        Set-VMFirmware -VMName $VMName -BootOrder $Order1, $Order2, $Order3, $Order4, $Order5 | Out-Null
         
         Write-Host "Starting $VMName" -ForegroundColor Magenta -BackgroundColor Black
-        Start-VM -Name $VMName
+        Start-VM -Name $VMName | Out-Null
     }
 
 }
 Write-Host "Deploy DC01" -ForegroundColor Green -BackgroundColor Black
-New-CustomVM -VMName $VMConfigs.Name[0] -Type $VMConfigs.Type[0]
+New-CustomVM -VMName $VMConfigs.Name[0] -Type $VMConfigs.Type[0] | Out-Null
 Write-Host "Deploy DHCP" -ForegroundColor Green -BackgroundColor Black
-New-CustomVM -VMName $VMConfigs.Name[1] -Type $VMConfigs.Type[1]
+New-CustomVM -VMName $VMConfigs.Name[1] -Type $VMConfigs.Type[1] | Out-Null
 Write-Host "Deploy FS01" -ForegroundColor Green -BackgroundColor Black
-New-CustomVM -VMName $VMConfigs.Name[2] -Type $VMConfigs.Type[2]
+New-CustomVM -VMName $VMConfigs.Name[2] -Type $VMConfigs.Type[2] | Out-Null
 Write-Host "Deploy CL01" -ForegroundColor Green -BackgroundColor Black
-New-CustomVM -VMName $VMConfigs.Name[4] -Type $VMConfigs.Type[4]
+New-CustomVM -VMName $VMConfigs.Name[4] -Type $VMConfigs.Type[4] | Out-Null
 Write-Host "Deploy DC02" -ForegroundColor Green -BackgroundColor Black
-New-CustomVM -VMName $VMConfigs.Name[5] -Type $VMConfigs.Type[5]
+New-CustomVM -VMName $VMConfigs.Name[5] -Type $VMConfigs.Type[5] | Out-Null
 
 
 $localusr = "Administrator"
@@ -786,13 +786,16 @@ $domaincred = new-object -typename System.Management.Automation.PSCredential -ar
 
 #Wait for DC01 to respond to PowerShell Direct
 Write-Host "Wait for DC01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((Invoke-Command -VMName DC01 -Credential $localcred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 5}
+while ((Invoke-Command -VMName DC01 -Credential $localcred {"Test"} -ea SilentlyContinue) -ne "Test") {
+    Write-Host "Still waiting..." -ForegroundColor Green -BackgroundColor Black
+    Start-Sleep -Seconds 5
+}
 
 #Configure Networking and install AD DS on DC01
 Write-Host "Configure Networking and install AD DS on DC01" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -VMName DC01 -Credential $localcred -ScriptBlock {
     #Disable IPV6
-    Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding
+    Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding | Out-Null
 
     #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
     Write-Host "Set IP Address" -ForegroundColor Blue -BackgroundColor Black
@@ -802,7 +805,7 @@ Invoke-Command -VMName DC01 -Credential $localcred -ScriptBlock {
         PrefixLength = "24"
         InterfaceIndex = (Get-NetAdapter).InterfaceIndex
     }
-    New-NetIPAddress @Params
+    New-NetIPAddress @Params | Out-Null
 
     Write-Host "Set DNS" -ForegroundColor Blue -BackgroundColor Black
     #Configure DNS Settings
@@ -810,22 +813,25 @@ Invoke-Command -VMName DC01 -Credential $localcred -ScriptBlock {
         ServerAddresses = "192.168.10.10"
         InterfaceIndex = (Get-NetAdapter).InterfaceIndex
     }
-    Set-DNSClientServerAddress @Params
+    Set-DNSClientServerAddress @Params | Out-Null
 
     #Install AD DS server role
     Write-Host "Install AD DS Server Role" -ForegroundColor Blue -BackgroundColor Black
-    Install-WindowsFeature -name AD-Domain-Services -IncludeManagementTools
+    Install-WindowsFeature -name AD-Domain-Services -IncludeManagementTools | Out-Null
 
     #Configure server as a domain controller
     Write-Host "Configure server as a domain controller" -ForegroundColor Blue -BackgroundColor Black
-    Install-ADDSForest -DomainName ad.contoso.com -DomainNetBIOSName AD -InstallDNS -Force -SafeModeAdministratorPassword (ConvertTo-SecureString "1Password" -AsPlainText -Force)
+    Install-ADDSForest -DomainName ad.contoso.com -DomainNetBIOSName AD -InstallDNS -Force -SafeModeAdministratorPassword (ConvertTo-SecureString "1Password" -AsPlainText -Force) | Out-Null
 }
 
 Start-Sleep -Seconds 10
 
 #Wait for DC01 to respond to PowerShell Direct
 Write-Host "Wait for DC01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((Invoke-Command -VMName DC01 -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 5}
+while ((Invoke-Command -VMName DC01 -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {
+    Write-Host "Still waiting..." -ForegroundColor Green -BackgroundColor Black
+    Start-Sleep -Seconds 5
+}
 
 Invoke-Command -VMName DC01 -Credential $domaincred -ScriptBlock {
     while ((Get-Process | Where-Object ProcessName -eq "LogonUI") -ne $null) {
@@ -839,23 +845,23 @@ Write-host "LogonUI is down! Server is good to go!"
 Write-Host "DC01 postinstall script" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
     Write-Host "Set DNS Forwarder" -ForegroundColor Blue -BackgroundColor Black
-    Set-DnsServerForwarder -IPAddress "1.1.1.1" -PassThru
+    Set-DnsServerForwarder -IPAddress "1.1.1.1" -PassThru | Out-Null
     #Create OU's
     Write-Host "Create OU's" -ForegroundColor Blue -BackgroundColor Black
     #Base OU
-    New-ADOrganizationalUnit -Name "Contoso" -Path "DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit -Name "Contoso" -Path "DC=ad,DC=contoso,DC=com" | Out-Null
     #Devices
-    New-ADOrganizationalUnit -Name "Devices" -Path "OU=Contoso,DC=ad,DC=contoso,DC=com"
-    New-ADOrganizationalUnit -Name "Servers" -Path "OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
-    New-ADOrganizationalUnit -Name "Workstations" -Path "OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit -Name "Devices" -Path "OU=Contoso,DC=ad,DC=contoso,DC=com" | Out-Null
+    New-ADOrganizationalUnit -Name "Servers" -Path "OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com" | Out-Null
+    New-ADOrganizationalUnit -Name "Workstations" -Path "OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com" | Out-Null
     #Users
-    New-ADOrganizationalUnit -Name "Users" -Path "OU=Contoso,DC=ad,DC=contoso,DC=com"
-    New-ADOrganizationalUnit -Name "Admins" -Path "OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com"
-    New-ADOrganizationalUnit -Name "Employees" -Path "OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit -Name "Users" -Path "OU=Contoso,DC=ad,DC=contoso,DC=com" | Out-Null
+    New-ADOrganizationalUnit -Name "Admins" -Path "OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com" | Out-Null
+    New-ADOrganizationalUnit -Name "Employees" -Path "OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com" | Out-Null
     #Groups
-    New-ADOrganizationalUnit -Name "Groups" -Path "OU=Contoso,DC=ad,DC=contoso,DC=com"
-    New-ADOrganizationalUnit -Name "SecurityGroups" -Path "OU=Groups,OU=Contoso,DC=ad,DC=contoso,DC=com"
-    New-ADOrganizationalUnit -Name "DistributionLists" -Path "OU=Groups,OU=Contoso,DC=ad,DC=contoso,DC=com"
+    New-ADOrganizationalUnit -Name "Groups" -Path "OU=Contoso,DC=ad,DC=contoso,DC=com" | Out-Null
+    New-ADOrganizationalUnit -Name "SecurityGroups" -Path "OU=Groups,OU=Contoso,DC=ad,DC=contoso,DC=com" | Out-Null
+    New-ADOrganizationalUnit -Name "DistributionLists" -Path "OU=Groups,OU=Contoso,DC=ad,DC=contoso,DC=com" | Out-Null
     #New admin user
     Write-Host "New admin user" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
@@ -866,9 +872,9 @@ Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
         DisplayName = "John Smith - Admin"
         Path = "OU=Admins,OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com"
     }
-    New-ADUser @Params
+    New-ADUser @Params | Out-Null
     #Add admin to Domain Admins group
-    Add-ADGroupMember -Identity "Domain Admins" -Members "Admin-John.Smith"
+    Add-ADGroupMember -Identity "Domain Admins" -Members "Admin-John.Smith" | Out-Null
 
     #New domain user
     Write-Host "New domain user" -ForegroundColor Blue -BackgroundColor Black
@@ -882,83 +888,50 @@ Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
         Department = "Information Technology"
         Path = "OU=Employees,OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com"
     }
-    New-ADUser @Params
+    New-ADUser @Params | Out-Null
     #Will have issues logging in through Hyper-V Enhanced Session Mode if not in this group
-    Add-ADGroupMember -Identity "Remote Desktop Users" -Members "John.Smith"
+    Add-ADGroupMember -Identity "Remote Desktop Users" -Members "John.Smith" | Out-Null
 
     #Add Company SGs and add members to it
     Write-Host "Add Company SGs and add members to it" -ForegroundColor Blue -BackgroundColor Black
-    New-ADGroup -Name "All-Staff" -SamAccountName "All-Staff" -GroupCategory Security -GroupScope Global -DisplayName "All-Staff" -Path "OU=SecurityGroups,OU=Groups,OU=Contoso,DC=ad,DC=contoso,DC=com" -Description "Members of this group are employees of Contoso"
-    Add-ADGroupMember -Identity "All-Staff" -Members "John.Smith"
+    New-ADGroup -Name "All-Staff" -SamAccountName "All-Staff" -GroupCategory Security -GroupScope Global -DisplayName "All-Staff" -Path "OU=SecurityGroups,OU=Groups,OU=Contoso,DC=ad,DC=contoso,DC=com" -Description "Members of this group are employees of Contoso" | Out-Null
+    Add-ADGroupMember -Identity "All-Staff" -Members "John.Smith" | Out-Null
 }
 
 #Wait for DHCP to respond to PowerShell Direct
 Write-Host "Wait for DHCP to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((Invoke-Command -VMName DHCP -Credential $localcred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 5}
+while ((Invoke-Command -VMName DHCP -Credential $localcred {"Test"} -ea SilentlyContinue) -ne "Test") {
+    Write-Host "Still waiting..." -ForegroundColor Green -BackgroundColor Black
+    Start-Sleep -Seconds 5
+}
 
 #DHCP configure networking and domain join
 Write-Host "DHCP postinstall script" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -Credential $domaincred -VMName DHCP -ScriptBlock {
     #Disable IPV6
-    Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding
+    Write-Host "Disable IPV6" -ForegroundColor Blue -BackgroundColor Black
+    Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding | Out-Null
 
     #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
-    $Params = @{
-        IPAddress = "192.168.10.12"
-        DefaultGateway = "192.168.10.1"
-        PrefixLength = "24"
-        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
-    }
-    New-NetIPAddress @Params
-
-    #Configure DNS Settings
-    $Params = @{
-        ServerAddresses = "192.168.10.10"
-        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
-    }
-    Set-DNSClientServerAddress @Params
-
-
-    $usr = "ad\Administrator"
-    $password = ConvertTo-SecureString "1Password" -AsPlainText -Force
-    $cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $usr, $password
-    $Params = @{
-	    DomainName = "ad.contoso.com"
-	    OUPath = "OU=Servers,OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
-	    Credential = $cred
-	    Force = $true
-	    Restart = $true
-    }
-    Add-Computer @Params
-}
-
-#Wait for FS01 to respond to PowerShell Direct
-Write-Host "Wait for FS01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((Invoke-Command -VMName FS01 -Credential $localcred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 5}
-
-#FS01 Networking and domain join
-Write-Host "FS01 Networking and domain join" -ForegroundColor Green -BackgroundColor Black
-Invoke-Command -Credential $localcred -VMName FS01 -ScriptBlock {
-    #Disable IPV6
-    Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding
-
-    #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
+    Write-Host "Set IP Address" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         IPAddress = "192.168.10.13"
         DefaultGateway = "192.168.10.1"
         PrefixLength = "24"
         InterfaceIndex = (Get-NetAdapter).InterfaceIndex
     }
-    New-NetIPAddress @Params
+    New-NetIPAddress @Params | Out-Null
 
     #Configure DNS Settings
+    Write-Host "Configure DNS" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         ServerAddresses = "192.168.10.10"
         InterfaceIndex = (Get-NetAdapter).InterfaceIndex
     }
-    Set-DNSClientServerAddress @Params
+    Set-DNSClientServerAddress @Params | Out-Null
 
-
+    #Domain join
+    Write-Host "Domain join and restart" -ForegroundColor Blue -BackgroundColor Black
     $usr = "ad\Administrator"
     $password = ConvertTo-SecureString "1Password" -AsPlainText -Force
     $cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $usr, $password
@@ -969,29 +942,79 @@ Invoke-Command -Credential $localcred -VMName FS01 -ScriptBlock {
 	    Force = $true
 	    Restart = $true
     }
-    Add-Computer @Params
+    Add-Computer @Params | Out-Null
+}
+
+#Wait for FS01 to respond to PowerShell Direct
+Write-Host "Wait for FS01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
+while ((Invoke-Command -VMName FS01 -Credential $localcred {"Test"} -ea SilentlyContinue) -ne "Test") {
+    Write-Host "Still waiting..." -ForegroundColor Green -BackgroundColor Black
+    Start-Sleep -Seconds 5
+}
+
+#FS01 Networking and domain join
+Write-Host "FS01 Networking and domain join" -ForegroundColor Green -BackgroundColor Black
+Invoke-Command -Credential $localcred -VMName FS01 -ScriptBlock {
+    #Disable IPV6
+    Write-Host "Disable IPV6" -ForegroundColor Blue -BackgroundColor Black
+    Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding | Out-Null
+
+    #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
+    Write-Host "Set IP Address" -ForegroundColor Blue -BackgroundColor Black
+    $Params = @{
+        IPAddress = "192.168.10.14"
+        DefaultGateway = "192.168.10.1"
+        PrefixLength = "24"
+        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
+    }
+    New-NetIPAddress @Params | Out-Null
+
+    #Configure DNS Settings
+    Write-Host "Configure DNS" -ForegroundColor Blue -BackgroundColor Black
+    $Params = @{
+        ServerAddresses = "192.168.10.10"
+        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
+    }
+    Set-DNSClientServerAddress @Params | Out-Null
+
+    #Domain Join
+    Write-Host "Domain Join" -ForegroundColor Blue -BackgroundColor Black
+    $usr = "ad\Administrator"
+    $password = ConvertTo-SecureString "1Password" -AsPlainText -Force
+    $cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $usr, $password
+    $Params = @{
+	    DomainName = "ad.contoso.com"
+	    OUPath = "OU=Servers,OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
+	    Credential = $cred
+	    Force = $true
+	    Restart = $true
+    }
+    Add-Computer @Params | Out-Null
 }
 
 
 #Wait for DHCP to respond to PowerShell Direct
 Write-Host "Wait for DHCP to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((Invoke-Command -VMName DHCP -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 5}
+while ((Invoke-Command -VMName DHCP -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {
+    Write-Host "Still waiting..." -ForegroundColor Green -BackgroundColor Black
+    Start-Sleep -Seconds 5
+}
 
 #DHCP postinstall script
 Write-Host "DHCP postinstall script" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -Credential $domaincred -VMName DHCP -ScriptBlock {
     #Install DCHP server role
     Write-Host "Install DCHP server role" -ForegroundColor Blue -BackgroundColor Black
-    Install-WindowsFeature DHCP -IncludeManagementTools
+    Install-WindowsFeature DHCP -IncludeManagementTools | Out-Null
 
     #Add required DHCP security groups on server and restart service
     Write-Host "Add required DHCP security groups on server and restart service" -ForegroundColor Blue -BackgroundColor Black
-    netsh dhcp add securitygroups
-    Restart-Service dhcpserver
+    netsh dhcp add securitygroups | Out-Null
+    Restart-Service dhcpserver | Out-Null
 
     #Authorize DHCP Server in AD
     Write-Host "Authorize DHCP Server in AD" -ForegroundColor Blue -BackgroundColor Black
-    Add-DhcpServerInDC -DnsName dhcp.ad.contoso.com
+    Add-DhcpServerInDC -DnsName dhcp.ad.contoso.com | Out-Null
 
     #Notify Server Manager that DCHP installation is complete, since it doesn't do this automatically
     Write-Host "Notify Server Manager that DCHP installation is complete, since it doesn't do this automatically" -ForegroundColor Blue -BackgroundColor Black
@@ -1000,48 +1023,51 @@ Invoke-Command -Credential $domaincred -VMName DHCP -ScriptBlock {
         Name = "ConfigurationState"
         Value = "2"
     }
-    Set-ItemProperty @Params
+    Set-ItemProperty @Params | Out-Null
 
     #Configure DHCP Scope
     Write-Host "Configure DHCP Scope" -ForegroundColor Blue -BackgroundColor Black
-    Add-DhcpServerv4Scope -name "Corpnet" -StartRange 192.168.10.50 -EndRange 192.168.10.254 -SubnetMask 255.255.255.0 -State Active
+    Add-DhcpServerv4Scope -name "Corpnet" -StartRange 192.168.10.50 -EndRange 192.168.10.254 -SubnetMask 255.255.255.0 -State Active | Out-Null
 
     #Exclude address range
     Write-Host "Exclude address range" -ForegroundColor Blue -BackgroundColor Black
-    Add-DhcpServerv4ExclusionRange -ScopeID 192.168.10.0 -StartRange 192.168.10.1 -EndRange 192.168.10.49
+    Add-DhcpServerv4ExclusionRange -ScopeID 192.168.10.0 -StartRange 192.168.10.1 -EndRange 192.168.10.49 | Out-Null
 
     #Specify default gateway 
     Write-Host "Specify default gateway " -ForegroundColor Blue -BackgroundColor Black
-    Set-DhcpServerv4OptionValue -OptionID 3 -Value 192.168.10.1 -ScopeID 192.168.10.0 -ComputerName dhcp.ad.contoso.com
+    Set-DhcpServerv4OptionValue -OptionID 3 -Value 192.168.10.1 -ScopeID 192.168.10.0 -ComputerName dhcp.ad.contoso.com | Out-Null
 
     #Specify default DNS server
     Write-Host "Specify default DNS server" -ForegroundColor Blue -BackgroundColor Black
-    Set-DhcpServerv4OptionValue -DnsDomain ad.contoso.com -DnsServer 192.168.10.10
+    Set-DhcpServerv4OptionValue -DnsDomain ad.contoso.com -DnsServer 192.168.10.10 | Out-Null
 }
 
 #Wait for FS01 to respond to PowerShell Direct
 Write-Host "Wait for FS01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((Invoke-Command -VMName FS01 -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 5}
+while ((Invoke-Command -VMName FS01 -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {
+    Write-Host "Still waiting..." -ForegroundColor Green -BackgroundColor Black
+    Start-Sleep -Seconds 5
+}
 
 #FS01 post-install
 Write-Host "FS01 post-install" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -Credential $domaincred -VMName FS01 -ScriptBlock {
     #Bring data disk online
     Write-Host "Bring data disk online" -ForegroundColor Blue -BackgroundColor Black
-    Initialize-Disk -Number 1
+    Initialize-Disk -Number 1 | Out-Null
     #Partition and format
     Write-Host "Partition and format" -ForegroundColor Blue -BackgroundColor Black
-    New-Partition -DiskNumber 1 -UseMaximumSize | Format-Volume -FileSystem "NTFS" -NewFileSystemLabel "Data"
+    New-Partition -DiskNumber 1 -UseMaximumSize | Format-Volume -FileSystem "NTFS" -NewFileSystemLabel "Data" | Out-Null
     #Set drive letter 
     Write-Host "Set drive letter" -ForegroundColor Blue -BackgroundColor Black
-    Set-Partition -DiskNumber 1 -PartitionNumber 2 -NewDriveLetter F
+    Set-Partition -DiskNumber 1 -PartitionNumber 2 -NewDriveLetter F | Out-Null
 
 
     Write-Host "Install FS Feature" -ForegroundColor Blue -BackgroundColor Black
-    Install-WindowsFeature FS-FileServer 
+    Install-WindowsFeature FS-FileServer  | Out-Null
 
     Write-Host "Create NetworkShare folder" -ForegroundColor Blue -BackgroundColor Black
-    New-Item "F:\Data\NetworkShare" -Type Directory
+    New-Item "F:\Data\NetworkShare" -Type Directory | Out-Null
 
     Write-Host "Create new SMB share" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
@@ -1051,32 +1077,36 @@ Invoke-Command -Credential $domaincred -VMName FS01 -ScriptBlock {
         ReadAccess = "Domain Users"
         FolderEnumerationMode = "Unrestricted"
     }
-    New-SmbShare @Params
+    New-SmbShare @Params | Out-Null
 
     Write-Host "Install and configure DFS Namespace" -ForegroundColor Blue -BackgroundColor Black
-    Install-WindowsFeature FS-DFS-Namespace -IncludeManagementTools
-    New-DfsnRoot -TargetPath "\\fs01.ad.contoso.com\NetworkShare" -Type DomainV2 -Path "\\ad.contoso.com\NetworkShare"
+    Install-WindowsFeature FS-DFS-Namespace -IncludeManagementTools | Out-Null
+    New-DfsnRoot -TargetPath "\\fs01.ad.contoso.com\NetworkShare" -Type DomainV2 -Path "\\ad.contoso.com\NetworkShare" | Out-Null
 }
 
 #Wait for DC01 to respond to PowerShell Direct
 Write-Host "Wait for DC01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((Invoke-Command -VMName DC01 -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 5}
+while ((Invoke-Command -VMName DC01 -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {
+    Write-Host "Still waiting..." -ForegroundColor Green -BackgroundColor Black
+    Start-Sleep -Seconds 5
+}
 
 #Group policy configuration
 Write-Host "Group policy configuration" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
+    Write-Host "Creating drive mapping GPO" -ForegroundColor Blue -BackgroundColor Black
     #Create GPO
     $gpoOuObj=new-gpo -name "All Staff Mapped Drive"
 
     #Link GPO to domain
-    new-gplink -Guid $gpoOuObj.Id.Guid -target "DC=ad,DC=contoso,DC=com"
+    new-gplink -Guid $gpoOuObj.Id.Guid -target "DC=ad,DC=contoso,DC=com" | Out-Null
 
     #Get GUID and make it upper case
     $guid = $gpoOuObj.Id.Guid.ToUpper()
 
     #Create a folder that the GP MMC snap-in normally would
     $path="\\ad.contoso.com\SYSVOL\ad.contoso.com\Policies\{$guid}\User\Preferences\Drives"
-    New-Item -Path $path -type Directory | Out-Null
+    New-Item -Path $path -type Directory | Out-Null 
 
     #Variables that would normally be set in the Drive Mapping dialog box
     $Letter = "M"
@@ -1104,11 +1134,11 @@ $data = @"
 </Drives>
 "@
     #Write XML
-    $data | out-file $path\drives.xml -Encoding "utf8"
+    $data | out-file $path\drives.xml -Encoding "utf8" | Out-Null
 
     #Edit AD Attribute "gPCUserExtensionNames" since the GP MMC snap-in normally would 
     $ExtensionNames = "[{00000000-0000-0000-0000-000000000000}{2EA1A81B-48E5-45E9-8BB7-A6E3AC170006}][{5794DAFD-BE60-433F-88A2-1A31939AC01F}{2EA1A81B-48E5-45E9-8BB7-A6E3AC170006}]"
-    Set-ADObject -Identity "CN={$guid},CN=Policies,CN=System,DC=ad,DC=contoso,DC=com" -Add @{gPCUserExtensionNames=$ExtensionNames}
+    Set-ADObject -Identity "CN={$guid},CN=Policies,CN=System,DC=ad,DC=contoso,DC=com" -Add @{gPCUserExtensionNames=$ExtensionNames} | Out-Null
 
     #A versionNumber of 0 means that clients won't get the policy since it hasn't changed
     #Edit something random (and easy) so it increments the versionNumber properly
@@ -1120,54 +1150,73 @@ $data = @"
         ValueName = "{645FF040-5081-101B-9F08-00AA002F954E}"
         Value = 1
     }
-    set-GPRegistryValue @Params
+    set-GPRegistryValue @Params | Out-Null
 }
 
 #Wait for DC02 to respond to PowerShell Direct
 Write-Host "Wait for DC02 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((Invoke-Command -VMName DC02 -Credential $localcred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 5}
+while ((Invoke-Command -VMName DC02 -Credential $localcred {"Test"} -ea SilentlyContinue) -ne "Test") {
+    Write-Host "Still waiting..." -ForegroundColor Green -BackgroundColor Black
+    Start-Sleep -Seconds 5
+}
 
 #DC02 Networking and domain join
 Write-Host "DC02 Networking and domain join" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -Credential $localcred -VMName DC02 -ScriptBlock {
     #Disable IPV6
-    Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding
+    Write-Host "Disable IPV6" -ForegroundColor Blue -BackgroundColor Black
+    Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding | Out-Null
     
     #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
+    Write-Host "Set IP Address" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         IPAddress = "192.168.10.11"
         DefaultGateway = "192.168.10.1"
         PrefixLength = "24"
         InterfaceIndex = (Get-NetAdapter).InterfaceIndex
     }
-    New-NetIPAddress @Params
+    New-NetIPAddress @Params | Out-Null
 
     #Configure DNS Settings
+    Write-Host "Configure DNS" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         ServerAddresses = "192.168.10.10"
         InterfaceIndex = (Get-NetAdapter).InterfaceIndex
     }
-    Set-DNSClientServerAddress @Params
+    Set-DNSClientServerAddress @Params | Out-Null
 
+    #Install AD DS server role
+    Write-Host "Install AD DS Server Role" -ForegroundColor Blue -BackgroundColor Black
+    Install-WindowsFeature -name AD-Domain-Services -IncludeManagementTools | Out-Null
+
+    #Promote to DC
+    Write-Host "Promote to DC" -ForegroundColor Blue -BackgroundColor Black
     $dc02usr = "ad\Administrator"
     $dc02password = ConvertTo-SecureString "1Password" -AsPlainText -Force
     $dc02cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $dc02usr, $dc02password
-    Install-ADDSDomainController -DomainName "ad.contoso.com" -InstallDns:$true -Credential $dc02cred
+    Install-ADDSDomainController -DomainName "ad.contoso.com" -InstallDns:$true -Credential $dc02cred -Force -SafeModeAdministratorPassword (ConvertTo-SecureString "1Password" -AsPlainText -Force) | Out-Null
 }
 
 #Wait for CL01 to respond to PowerShell Direct
 Write-Host "Wait for CL01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((Invoke-Command -VMName CL01 -Credential $localcred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 5}
+while ((Invoke-Command -VMName CL01 -Credential $localcred {"Test"} -ea SilentlyContinue) -ne "Test") {
+    Write-Host "Still waiting..." -ForegroundColor Green -BackgroundColor Black
+    Start-Sleep -Seconds 5
+}
 
 #CL01 Networking and domain join
 Write-Host "CL01 Networking and domain join" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -Credential $localcred -VMName CL01 -ScriptBlock {
     #Disable IPV6
-    Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding
+    Write-Host "Disable IPV6" -ForegroundColor Blue -BackgroundColor Black
+    Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding | Out-Null
     
-    ipconfig /release
-    ipconfig /renew
+    Write-Host "Get a new DHCP lease" -ForegroundColor Blue -BackgroundColor Black
+    ipconfig /release | Out-Null
+    ipconfig /renew | Out-Null
 
+    #Domain join and restart
+    Write-Host "Domain join and restart" -ForegroundColor Blue -BackgroundColor Black
     $usr = "ad\Administrator"
     $password = ConvertTo-SecureString "1Password" -AsPlainText -Force
     $cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $usr, $password
@@ -1178,5 +1227,87 @@ Invoke-Command -Credential $localcred -VMName CL01 -ScriptBlock {
 	    Force = $true
 	    Restart = $true
     }
-    Add-Computer @Params
+    Add-Computer @Params | Out-Null
 }
+
+#Clone DC02 to DC03
+
+#Wait for DC02 to respond to PowerShell Direct
+Write-Host "Wait for DC02 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
+while ((Invoke-Command -VMName DC02 -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {
+    Write-Host "Still waiting..." -ForegroundColor Green -BackgroundColor Black
+    Start-Sleep -Seconds 5
+}
+
+#DC02 Networking and domain join
+Write-Host "DC02 Networking and domain join" -ForegroundColor Green -BackgroundColor Black
+Invoke-Command -Credential $domaincred -VMName DC02 -ScriptBlock {
+    #Add to Cloneable Domain Controllers
+    Write-Host "Add to Cloneable Domain Controllers" -ForegroundColor Blue -BackgroundColor Black
+    Add-ADGroupMember -Identity "Cloneable Domain Controllers" -Members "CN=DC02,OU=Domain Controllers,DC=ad,DC=contoso,DC=com" | Out-Null
+
+    #List of applications that won't be cloned
+    Write-Host "List of applications that won't be cloned" -ForegroundColor Blue -BackgroundColor Black
+    Get-ADDCCloningExcludedApplicationList -GenerateXML | Out-Null
+
+    #Create clone config file
+    Write-Host "Create clone config file" -ForegroundColor Blue -BackgroundColor Black
+    $Params = @{
+        CloneComputerName   =   "DC03"
+        Static              =   $true
+        IPv4Address         =   "192.168.10.12"
+        IPv4SubnetMask      =   "255.255.255.0"
+        IPv4DefaultGateway  =   "192.168.10.1"
+        IPv4DNSResolver     =   "192.168.10.10"
+    }
+    New-ADDCCloneConfigFile @Params | Out-Null
+
+    #Shutdown DC02
+    Write-Host "Shutdown DC02" -ForegroundColor Blue -BackgroundColor Black
+    Stop-Computer -Force | Out-Null
+}
+
+#Check DC02 is shutdown
+while ((Get-VM "DC02").State -ne "Off") {
+    Write-Host "Waiting for DC02 to shutdown..." -ForegroundColor Green -BackgroundColor Black
+    Start-Sleep -Seconds 2
+}
+Write-Host "DC02 is down, moving on" -ForegroundColor Green -BackgroundColor Black
+
+#Export VM
+Write-Host "Export VM" -ForegroundColor Green -BackgroundColor Black
+Export-VM -Name "DC02" -Path E:\Export | Out-Null
+
+#Start DC02
+Write-Host "Start DC02" -ForegroundColor Green -BackgroundColor Black
+Start-VM -Name "DC02" | Out-Null
+
+#New directory for DC03
+Write-Host "New directory for DC03" -ForegroundColor Green -BackgroundColor Black
+$guid = (Get-VM "DC02").vmid.guid.ToUpper()
+New-Item -Type Directory -Path "E:\DC03" | Out-Null
+
+#Import DC02
+Write-Host "Import DC02" -ForegroundColor Green -BackgroundColor Black
+$Params = @{
+    Path                =   "E:\Export\DC02\Virtual Machines\$guid.vmcx"
+    VirtualMachinePath  =   "E:\DC03"
+    VhdDestinationPath  =   "E:\DC03"
+    SnapshotFilePath    =   "E:\DC03"
+    SmartPagingFilePath =   "E:\DC03"
+    Copy                =   $true
+    GenerateNewId       =   $true
+}
+Import-VM @Params | Out-Null
+
+#Rename DC02 to DC03
+Write-Host "Rename DC02 to DC03" -ForegroundColor Green -BackgroundColor Black
+Get-VM DC02 | Where-Object State -eq "Off" | Rename-VM -NewName DC03 | Out-Null
+
+#Start DC03
+Write-Host "Start DC03" -ForegroundColor Green -BackgroundColor Black
+Start-VM -Name "DC03" | Out-Null
+
+#Cleanup export folder
+Write-Host "Cleanup export folder" -ForegroundColor Green -BackgroundColor Black
+Remove-Item -Recurse E:\Export\ | Out-Null
