@@ -791,6 +791,9 @@ while ((Invoke-Command -VMName DC01 -Credential $localcred {"Test"} -ea Silently
 #Configure Networking and install AD DS on DC01
 Write-Host "Configure Networking and install AD DS on DC01" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -VMName DC01 -Credential $localcred -ScriptBlock {
+    #Disable IPV6
+    Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding
+
     #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
     Write-Host "Set IP Address" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
@@ -896,6 +899,9 @@ while ((Invoke-Command -VMName DHCP -Credential $localcred {"Test"} -ea Silently
 #DHCP configure networking and domain join
 Write-Host "DHCP postinstall script" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -Credential $domaincred -VMName DHCP -ScriptBlock {
+    #Disable IPV6
+    Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding
+
     #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
     $Params = @{
         IPAddress = "192.168.10.12"
@@ -933,6 +939,9 @@ while ((Invoke-Command -VMName FS01 -Credential $localcred {"Test"} -ea Silently
 #FS01 Networking and domain join
 Write-Host "FS01 Networking and domain join" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -Credential $localcred -VMName FS01 -ScriptBlock {
+    #Disable IPV6
+    Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding
+
     #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
     $Params = @{
         IPAddress = "192.168.10.13"
@@ -1121,6 +1130,9 @@ while ((Invoke-Command -VMName DC02 -Credential $localcred {"Test"} -ea Silently
 #DC02 Networking and domain join
 Write-Host "DC02 Networking and domain join" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -Credential $localcred -VMName DC02 -ScriptBlock {
+    #Disable IPV6
+    Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding
+    
     #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
     $Params = @{
         IPAddress = "192.168.10.11"
@@ -1137,20 +1149,34 @@ Invoke-Command -Credential $localcred -VMName DC02 -ScriptBlock {
     }
     Set-DNSClientServerAddress @Params
 
-
     $dc02usr = "ad\Administrator"
     $dc02password = ConvertTo-SecureString "1Password" -AsPlainText -Force
     $dc02cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $dc02usr, $dc02password
+    Install-ADDSDomainController -DomainName "ad.contoso.com" -InstallDns:$true -Credential $dc02cred
+}
+
+#Wait for CL01 to respond to PowerShell Direct
+Write-Host "Wait for CL01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
+while ((Invoke-Command -VMName CL01 -Credential $localcred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 5}
+
+#CL01 Networking and domain join
+Write-Host "CL01 Networking and domain join" -ForegroundColor Green -BackgroundColor Black
+Invoke-Command -Credential $localcred -VMName CL01 -ScriptBlock {
+    #Disable IPV6
+    Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding
+    
+    ipconfig /release
+    ipconfig /renew
+
+    $usr = "ad\Administrator"
+    $password = ConvertTo-SecureString "1Password" -AsPlainText -Force
+    $cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $usr, $password
     $Params = @{
 	    DomainName = "ad.contoso.com"
-	    OUPath = "OU=Servers,OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
-	    Credential = $dc02cred
+	    OUPath = "OU=Workstations,OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
+	    Credential = $cred
 	    Force = $true
 	    Restart = $true
     }
     Add-Computer @Params
 }
-
-#Wait for DC02 to respond to PowerShell Direct
-Write-Host "Wait for DC02 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((Invoke-Command -VMName DC02 -Credential $localcred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 5}
