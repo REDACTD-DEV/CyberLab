@@ -629,11 +629,13 @@ $data | out-file "E:\autounattend\client-autounattend.xml" -Encoding "utf8"
 
 ## Deploy VMs
 $VMConfigs = @(
-    [PSCustomObject]@{Name = "DC01"; IP = "192.168.10.10/24"; MAC = "00155da182d1"; Script = "DC01.ps1"; Type = "Server"}
-    [PSCustomObject]@{Name = "DHCP"; IP = "192.168.10.12/24"; MAC = "00155da182d2"; Script = "DHCP.ps1"; Type = "Server"}
-    [PSCustomObject]@{Name = "FS01"; IP = "192.168.10.13/24"; MAC = "00155da182d3"; Script = "FS01.ps1"; Type = "Server"}
-    [PSCustomObject]@{Name = "WSUS"; IP = "192.168.10.14/24"; MAC = "00155da182d4"; Script = "WSUS.ps1"; Type = "Server"}
-    [PSCustomObject]@{Name = "CL01"; IP = "192.168.10.50/24"; MAC = "00155da182d5"; Script = "CL01.ps1"; Type = "Client"}
+    [PSCustomObject]@{Name = "DC01"; Type = "Server"}
+    [PSCustomObject]@{Name = "DC02"; Type = "Server"}
+    [PSCustomObject]@{Name = "DHCP"; Type = "Server"}
+    [PSCustomObject]@{Name = "FS01"; Type = "Server"}
+    [PSCustomObject]@{Name = "WSUS"; Type = "Server"}
+    [PSCustomObject]@{Name = "CL01"; Type = "Client"}
+    
 )
 
 function New-CustomVM {
@@ -641,12 +643,6 @@ function New-CustomVM {
 	param(
 		[Parameter()]
 		[String]$VMName,
-		[Parameter()]
-		[String]$IP,
-		[Parameter()]
-		[String]$MAC,
-		[Parameter()]
-		[String]$Script,
         [Parameter()]
 		[String]$Type
 	)
@@ -776,13 +772,15 @@ function New-CustomVM {
 
 }
 Write-Host "Deploy DC01" -ForegroundColor Green -BackgroundColor Black
-New-CustomVM -VMName $VMConfigs.Name[0] -IP $VMConfigs.IP[0] -MAC $VMConfigs.MAC[0] -Script $VMConfigs.Script[0] -Type $VMConfigs.Type[0]
+New-CustomVM -VMName $VMConfigs.Name[0] -Type $VMConfigs.Type[0]
+Write-Host "Deploy DC02" -ForegroundColor Green -BackgroundColor Black
+New-CustomVM -VMName $VMConfigs.Name[1] -Type $VMConfigs.Type[1]
 Write-Host "Deploy DHCP" -ForegroundColor Green -BackgroundColor Black
-New-CustomVM -VMName $VMConfigs.Name[1] -IP $VMConfigs.IP[1] -MAC $VMConfigs.MAC[1] -Script $VMConfigs.Script[1] -Type $VMConfigs.Type[1]
+New-CustomVM -VMName $VMConfigs.Name[2] -Type $VMConfigs.Type[2]
 Write-Host "Deploy FS01" -ForegroundColor Green -BackgroundColor Black
-New-CustomVM -VMName $VMConfigs.Name[2] -IP $VMConfigs.IP[2] -MAC $VMConfigs.MAC[2] -Script $VMConfigs.Script[2] -Type $VMConfigs.Type[2]
+New-CustomVM -VMName $VMConfigs.Name[3] -Type $VMConfigs.Type[3]
 Write-Host "Deploy CL01" -ForegroundColor Green -BackgroundColor Black
-New-CustomVM -VMName $VMConfigs.Name[4] -IP $VMConfigs.IP[4] -MAC $VMConfigs.MAC[4] -Script $VMConfigs.Script[4] -Type $VMConfigs.Type[4]
+New-CustomVM -VMName $VMConfigs.Name[5] -Type $VMConfigs.Type[5]
 
 
 $localusr = "Administrator"
@@ -790,6 +788,24 @@ $domainusr = "ad\Administrator"
 $password = ConvertTo-SecureString "1Password" -AsPlainText -Force
 $localcred = new-object -typename System.Management.Automation.PSCredential -argumentlist $localusr, $password
 $domaincred = new-object -typename System.Management.Automation.PSCredential -argumentlist $domainusr, $password
+
+function Wait-ForServer {
+    [CmdletBinding()]
+	param(
+		[Parameter()]
+		[String]$VMName
+#Wait for $VMName to respond to PowerShell Direct
+Write-Host "Wait for $VMName to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
+while ((Invoke-Command -VMName $VMName -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 1}
+
+Invoke-Command -VMName $VMName -Credential $domaincred -ScriptBlock {
+    while ((Get-Process | Where-Object ProcessName -eq "LogonUI") -ne $null) {
+        Start-Sleep 5
+        Write-Host "LogonUI still processing..."
+    }
+Write-host "LogonUI is down! Server is good to go!"
+}
+}
 
 #Wait for DC01 to respond to PowerShell Direct
 Write-Host "Wait for DC01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
@@ -819,40 +835,55 @@ Invoke-Command -VMName DC01 -Credential $localcred -ScriptBlock {
     #Install AD DS server role
     Write-Host "Install AD DS Server Role" -ForegroundColor Blue -BackgroundColor Black
     Install-WindowsFeature -name AD-Domain-Services -IncludeManagementTools
-
+    
     #Configure server as a domain controller
     Write-Host "Configure server as a domain controller" -ForegroundColor Blue -BackgroundColor Black
     Install-ADDSForest -DomainName ad.contoso.com -DomainNetBIOSName AD -InstallDNS -Force -SafeModeAdministratorPassword (ConvertTo-SecureString "1Password" -AsPlainText -Force)
 }
 
+#Make sure DC01 is up before configuring DC02
 Start-Sleep -Seconds 10
+Wait-ForServer -VMName "DC01"
 
-function Wait-ForAD {
-#Wait for DC01 to respond to PowerShell Direct
-Write-Host "Wait for DC01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((Invoke-Command -VMName DC01 -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 1}
+#Wait for DC02 to respond to PowerShell Direct
+Write-Host "Wait for DC02 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
+while ((Invoke-Command -VMName DC02 -Credential $localcred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 1}
 
-Invoke-Command -VMName DC01 -Credential $domaincred -ScriptBlock {
-    while ((Get-Process | Where-Object ProcessName -eq "LogonUI") -ne $null) {
-        Start-Sleep 5
-        Write-Host "LogonUI still processing..."
+#Configure Networking and install AD DS on DC02
+Write-Host "Configure Networking and install AD DS on DC02" -ForegroundColor Green -BackgroundColor Black
+Invoke-Command -VMName DC02 -Credential $localcred -ScriptBlock {
+    #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
+    Write-Host "Set IP Address" -ForegroundColor Blue -BackgroundColor Black
+    $Params = @{
+        IPAddress = "192.168.10.11"
+        DefaultGateway = "192.168.10.1"
+        PrefixLength = "24"
+        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
     }
-Write-host "LogonUI is down! Server is good to go!"
-}
+    New-NetIPAddress @Params
 
-#Wait for Active Directory Web Services to come online
-Write-Host "Wait for Active Directory Web Services to come online" -ForegroundColor Green -BackgroundColor Black
-Invoke-Command -VMName DC01 -Credential $domaincred -ScriptBlock {
-    Write-Verbose "Waiting for AD Web Services to be in a running state" -Verbose
-    $ADWebSvc = Get-Service ADWS | Select-Object *
-    while($ADWebSvc.Status -ne 'Running')
-        {
-        Start-Sleep -Seconds 1
-        }
-    Write-Host "ADWS is primed" -ForegroundColor Blue -BackgroundColor Black
-	}
-}
-Wait-ForAD
+    Write-Host "Set DNS" -ForegroundColor Blue -BackgroundColor Black
+    #Configure DNS Settings
+    $Params = @{
+        ServerAddresses = "192.168.10.11"
+        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
+    }
+    Set-DNSClientServerAddress @Params
+
+    #Install AD DS server role
+    Write-Host "Install AD DS Server Role" -ForegroundColor Blue -BackgroundColor Black
+    Install-WindowsFeature -name AD-Domain-Services -IncludeManagementTools
+
+
+    $domainusr = "ad\Administrator"
+    $password = ConvertTo-SecureString "1Password" -AsPlainText -Force
+    $domaincred = new-object -typename System.Management.Automation.PSCredential -argumentlist $domainusr, $password
+    #Configure server as a domain controller
+    Write-Host "Configure server as a domain controller" -ForegroundColor Blue -BackgroundColor Black
+    Install-ADDSDomainController -NoGlobalCatalog:$false -CreateDnsDelegation:$false -Credential $domaincred -CriticalReplicationOnly:$false -DatabasePath "C:\Windows\NTDS" -DomainName "ad.contoso.com" -InstallDns:$true -LogPath "C:\Windows\NTDS" -NoRebootOnCompletion:$false -SiteName "Default-First-Site-Name" -SysvolPath "C:\Windows\SYSVOL" -SafeModeAdministratorPassword (ConvertTo-SecureString "1Password" -AsPlainText -Force) -Force:$true}
+
+Wait-ForServer -VMName "DC01"
+Wait-ForServer -VMName "DC02"
 
 #DC01 postinstall script
 Write-Host "DC01 postinstall script" -ForegroundColor Green -BackgroundColor Black
@@ -911,59 +942,6 @@ Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
     Add-ADGroupMember -Identity "All-Staff" -Members "John.Smith"
 }
 
-##Clone DC01 into DC02
-Write-Host "#Clone DC01 into DC02" -ForegroundColor Green -BackgroundColor Black
-Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
-    #Add to Cloneable Domain Controllers
-    Add-ADGroupMember -Identity "Cloneable Domain Controllers" -Members "CN=DC01,OU=Domain Controllers,DC=ad,DC=contoso,DC=com"
-
-    #List of applications that won't be cloned
-    Get-ADDCCloningExcludedApplicationList -GenerateXML
-
-    #Create clone config file
-    $Params = @{
-        CloneComputerName   =   "DC02"
-        Static              =   $true
-        IPv4Address         =   "192.168.10.11"
-        IPv4SubnetMask      =   "255.255.255.0"
-        IPv4DefaultGateway  =   "192.168.10.1"
-        IPv4DNSResolver     =   "192.168.10.10"
-    }
-    New-ADDCCloneConfigFile @Params
-
-    #Shutdown DC01
-    Stop-Computer -Force
-}
-#Check DC01 is shutdown
-while (Get-VM  "DC01" | where State -ne "Off")
-    {
-        write-host "waiting for DC01 to shutdown..."
-        start-sleep -Seconds 5
-    }
-
-
-Export-VM -Name "DC01" -Path E:\Export
-Start-VM -Name "DC01"
-$guid = (Get-VM "DC01").vmid.guid.ToUpper()
-New-Item -Type Directory -Path "E:\DC02"
-$Params = @{
-    Path                =   "E:\Export\DC01\Virtual Machines\$guid.vmcx"
-    VirtualMachinePath  =   "E:\DC02"
-    VhdDestinationPath  =   "E:\DC02"
-    SnapshotFilePath    =   "E:\DC02"
-    SmartPagingFilePath =   "E:\DC02"
-    Copy                =   $true
-    GenerateNewId       =   $true
-}
-Import-VM @Params
-Get-VM DC01 | Where State -eq "Off" | Rename-VM -NewName DC02
-
-Remove-Item -Recurse E:\Export\
-
-Wait-ForAD
-
-Start-VM -Name "DC02"
-
 #Wait for DHCP to respond to PowerShell Direct
 Write-Host "Wait for DHCP to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
 while ((Invoke-Command -VMName DHCP -Credential $localcred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 1}
@@ -1000,44 +978,6 @@ Invoke-Command -Credential $domaincred -VMName DHCP -ScriptBlock {
     }
     Add-Computer @Params
 }
-
-#Wait for FS01 to respond to PowerShell Direct
-Write-Host "Wait for FS01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((Invoke-Command -VMName FS01 -Credential $localcred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 1}
-
-#FS01 Networking and domain join
-Write-Host "FS01 Networking and domain join" -ForegroundColor Green -BackgroundColor Black
-Invoke-Command -Credential $localcred -VMName FS01 -ScriptBlock {
-    #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
-    $Params = @{
-        IPAddress = "192.168.10.13"
-        DefaultGateway = "192.168.10.1"
-        PrefixLength = "24"
-        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
-    }
-    New-NetIPAddress @Params
-
-    #Configure DNS Settings
-    $Params = @{
-        ServerAddresses = "192.168.10.10"
-        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
-    }
-    Set-DNSClientServerAddress @Params
-
-
-    $usr = "ad\Administrator"
-    $password = ConvertTo-SecureString "1Password" -AsPlainText -Force
-    $cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $usr, $password
-    $Params = @{
-	    DomainName = "ad.contoso.com"
-	    OUPath = "OU=Servers,OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
-	    Credential = $cred
-	    Force = $true
-	    Restart = $true
-    }
-    Add-Computer @Params
-}
-
 
 #Wait for DHCP to respond to PowerShell Direct
 Write-Host "Wait for DHCP to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
@@ -1083,6 +1023,43 @@ Invoke-Command -Credential $domaincred -VMName DHCP -ScriptBlock {
     #Specify default DNS server
     Write-Host "Specify default DNS server" -ForegroundColor Blue -BackgroundColor Black
     Set-DhcpServerv4OptionValue -DnsDomain ad.contoso.com -DnsServer 192.168.10.10
+}
+
+#Wait for FS01 to respond to PowerShell Direct
+Write-Host "Wait for FS01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
+while ((Invoke-Command -VMName FS01 -Credential $localcred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 1}
+
+#FS01 Networking and domain join
+Write-Host "FS01 Networking and domain join" -ForegroundColor Green -BackgroundColor Black
+Invoke-Command -Credential $localcred -VMName FS01 -ScriptBlock {
+    #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
+    $Params = @{
+        IPAddress = "192.168.10.13"
+        DefaultGateway = "192.168.10.1"
+        PrefixLength = "24"
+        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
+    }
+    New-NetIPAddress @Params
+
+    #Configure DNS Settings
+    $Params = @{
+        ServerAddresses = "192.168.10.10"
+        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
+    }
+    Set-DNSClientServerAddress @Params
+
+
+    $usr = "ad\Administrator"
+    $password = ConvertTo-SecureString "1Password" -AsPlainText -Force
+    $cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $usr, $password
+    $Params = @{
+	    DomainName = "ad.contoso.com"
+	    OUPath = "OU=Servers,OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
+	    Credential = $cred
+	    Force = $true
+	    Restart = $true
+    }
+    Add-Computer @Params
 }
 
 #Wait for FS01 to respond to PowerShell Direct
@@ -1200,7 +1177,7 @@ Invoke-Command -Credential $localcred -VMName CL01 -ScriptBlock {
         $cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $usr, $password
         DomainName = "ad.contoso.com"
         OUPath = "OU=Workstations,OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
-        Credential = "ad.contoso.com\Administrator"
+        Credential = $cred
         Force = $true
         Restart = $true
     }
