@@ -276,11 +276,11 @@ function New-ISOFile {
 
 #Remove vSwitch if it exists
 Write-Host "Removing old vSwitch" -ForegroundColor Green -BackgroundColor Black
-Get-VMSwitch | Where-Object Name -eq "PrivateLabSwitch" | Remove-VMSwitch -Force
+Get-VMSwitch | Where-Object Name -eq "PrivateLabSwitch" | Remove-VMSwitch -Force | Out-Null
 
 #Create vSwitch
 Write-Host "Adding new vSwitch" -ForegroundColor Green -BackgroundColor Black
-New-VMSwitch -Name "PrivateLabSwitch" -SwitchType "Private"
+New-VMSwitch -Name "PrivateLabSwitch" -SwitchType "Private" | Out-Null
 
 $WinServerISO = "E:\ISO\WINSERVER-22.iso"
 $WinClientISO = "E:\ISO\Windows.iso"
