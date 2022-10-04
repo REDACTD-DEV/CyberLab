@@ -274,35 +274,13 @@ function New-ISOFile {
 
 } # function
 
-#Set Default Switch host adapter to an IP address in range
-#Variable settings for adapter.
-$IP = "192.168.10.2"
-$MaskBits = 24 # This means subnet mask = 255.255.255.0
-$Gateway = "192.168.10.2"
-$Dns = "1.1.1.1"
-$IPType = "IPv4"
+#Remove vSwitch if it exists
+Write-Host "Removing old vSwitch" -ForegroundColor Green -BackgroundColor Black
+Get-VMSwitch | Where-Object Name -eq "PrivateLabSwitch" | Remove-VMSwitch -Force
 
-# Retrieve the network adapter
-$adapter = Get-NetAdapter -InterfaceAlias "vEthernet (Default Switch)"
-
-# Remove any existing IP
-Write-Host "Remove any existing IP" -ForegroundColor Green -BackgroundColor Black
-If (($adapter | Get-NetIPConfiguration).IPv4Address.IPAddress) {
- $adapter | Remove-NetIPAddress -AddressFamily $IPType -Confirm:$false | Out-Null
-}
-
-#Removing any previous IP Address Gateway.
-Write-Host "Removing any previous IP Address Gateway" -ForegroundColor Green -BackgroundColor Black
-If (($adapter | Get-NetIPConfiguration).Ipv4DefaultGateway) {
- $adapter | Remove-NetRoute -AddressFamily $IPType -Confirm:$false | Out-Null
-}
- #Configure the IP address and default gateway
-Write-Host "Configure the IP address and default gateway" -ForegroundColor Green -BackgroundColor Black
-$adapter | New-NetIPAddress -AddressFamily $IPType -IPAddress $IP -PrefixLength $MaskBits -DefaultGateway $Gateway | Out-Null
-
-# Configure the DNS client server IP addresses
-Write-Host "Configure the DNS client server IP addresses" -ForegroundColor Green -BackgroundColor Black
-$adapter | Set-DnsClientServerAddress -ServerAddresses $DNS
+#Create vSwitch
+Write-Host "Adding new vSwitch" -ForegroundColor Green -BackgroundColor Black
+New-VMSwitch -Name "PrivateLabSwitch" -SwitchType "Private"
 
 $WinServerISO = "E:\ISO\WINSERVER-22.iso"
 $WinClientISO = "E:\ISO\Windows.iso"
