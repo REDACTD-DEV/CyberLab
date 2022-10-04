@@ -321,7 +321,7 @@ Copy-Item -Path $Path* -Destination "E:\WinServerISOBuild" -Recurse | Out-Null
 
 #Create WinServer ISO
 Write-Host "Create WinServer ISO" -ForegroundColor Green -BackgroundColor Black
-New-ISOFile -source "E:\WinServerISOBuild" -destinationISO $WinServerAutoISO -bootfile "E:\WinServerISOBuild\efi\microsoft\boot\efisys_noprompt.bin" -title "WINSERVER-22-Auto" -Verbose | Out-Null
+New-ISOFile -source "E:\WinServerISOBuild" -destinationISO $WinServerAutoISO -bootfile "E:\WinServerISOBuild\efi\microsoft\boot\efisys_noprompt.bin" -title "WINSERVER-22-Auto" | Out-Null
 
 #Cleanup
 Write-Host "Dismount ISO" -ForegroundColor Green -BackgroundColor Black
@@ -340,7 +340,7 @@ Copy-Item -Path $Path* -Destination "E:\WinClientISOBuild" -Recurse | Out-Null
 
 #Create WinClient ISO
 Write-Host "Create WinClient ISO" -ForegroundColor Green -BackgroundColor Black
-New-ISOFile -source "E:\WinClientISOBuild" -destinationISO $WinClientAutoISO -bootfile "E:\WinClientISOBuild\efi\microsoft\boot\efisys_noprompt.bin" -title "WINClient-22-Auto" -Verbose | Out-Null
+New-ISOFile -source "E:\WinClientISOBuild" -destinationISO $WinClientAutoISO -bootfile "E:\WinClientISOBuild\efi\microsoft\boot\efisys_noprompt.bin" -title "WINClient-22-Auto" | Out-Null
 
 #Cleanup
 Write-Host "Dismount ISO" -ForegroundColor Green -BackgroundColor Black
@@ -601,7 +601,7 @@ $data = @"
     <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
       <UserAccounts>
         <AdministratorPassword>
-          <Value>password</Value>
+          <Value>1Password</Value>
           <PlainText>true</PlainText>
         </AdministratorPassword>
       </UserAccounts>
@@ -705,7 +705,7 @@ function New-CustomVM {
 
         #Create the ISO
         Write-Host "Creating autounattend ISO for $VMName" -ForegroundColor Magenta -BackgroundColor Black
-        New-ISOFile -source "E:\$VMName\autounattend\" -destinationIso "E:\$VMName\autounattend.iso" -title autounattend -Verbose | Out-Null
+        New-ISOFile -source "E:\$VMName\autounattend\" -destinationIso "E:\$VMName\autounattend.iso" -title autounattend | Out-Null
 
         #Cleanup
         Remove-Item -Recurse -Path "E:\$VMName\autounattend\" | Out-Null
@@ -821,7 +821,7 @@ Invoke-Command -VMName DC01 -Credential $localcred -ScriptBlock {
 
     #Configure server as a domain controller
     Write-Host "Configure server as a domain controller" -ForegroundColor Blue -BackgroundColor Black
-    Install-ADDSForest -DomainName ad.contoso.com -DomainNetBIOSName AD -InstallDNS -Force -SafeModeAdministratorPassword (ConvertTo-SecureString "1Password" -AsPlainText -Force) | Out-Null
+    Install-ADDSForest -DomainName ad.contoso.com -DomainNetBIOSName AD -InstallDNS -Force -SafeModeAdministratorPassword (ConvertTo-SecureString "1Password" -AsPlainText -Force) -WarningAction SilentlyContinue | Out-Null
 }
 
 Start-Sleep -Seconds 10
@@ -836,9 +836,9 @@ while ((Invoke-Command -VMName DC01 -Credential $domaincred {"Test"} -ea Silentl
 Invoke-Command -VMName DC01 -Credential $domaincred -ScriptBlock {
     while ((Get-Process | Where-Object ProcessName -eq "LogonUI") -ne $null) {
         Start-Sleep 5
-        Write-Host "LogonUI still processing..."
+        Write-Host "LogonUI still processing..." -ForegroundColor Green -BackgroundColor Black
     }
-Write-host "LogonUI is down! Server is good to go!"
+Write-host "LogonUI is down! Server is good to go!" -ForegroundColor Green -BackgroundColor Black
 }
 
 #DC01 postinstall script
@@ -1194,7 +1194,7 @@ Invoke-Command -Credential $localcred -VMName DC02 -ScriptBlock {
     $dc02usr = "ad\Administrator"
     $dc02password = ConvertTo-SecureString "1Password" -AsPlainText -Force
     $dc02cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $dc02usr, $dc02password
-    Install-ADDSDomainController -DomainName "ad.contoso.com" -InstallDns:$true -Credential $dc02cred -Force -SafeModeAdministratorPassword (ConvertTo-SecureString "1Password" -AsPlainText -Force) | Out-Null
+    Install-ADDSDomainController -DomainName "ad.contoso.com" -InstallDns:$true -Credential $dc02cred -Force -SafeModeAdministratorPassword (ConvertTo-SecureString "1Password" -AsPlainText -Force) -WarningAction SilentlyContinue | Out-Null
 }
 
 #Wait for CL01 to respond to PowerShell Direct
@@ -1231,7 +1231,6 @@ Invoke-Command -Credential $localcred -VMName CL01 -ScriptBlock {
 }
 
 #Clone DC02 to DC03
-
 #Wait for DC02 to respond to PowerShell Direct
 Write-Host "Wait for DC02 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
 while ((Invoke-Command -VMName DC02 -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {
@@ -1239,8 +1238,7 @@ while ((Invoke-Command -VMName DC02 -Credential $domaincred {"Test"} -ea Silentl
     Start-Sleep -Seconds 5
 }
 
-#DC02 Networking and domain join
-Write-Host "DC02 Networking and domain join" -ForegroundColor Green -BackgroundColor Black
+Write-Host "DC02 cloning to DC03" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -Credential $domaincred -VMName DC02 -ScriptBlock {
     #Add to Cloneable Domain Controllers
     Write-Host "Add to Cloneable Domain Controllers" -ForegroundColor Blue -BackgroundColor Black
@@ -1248,10 +1246,12 @@ Invoke-Command -Credential $domaincred -VMName DC02 -ScriptBlock {
 
     #List of applications that won't be cloned
     Write-Host "List of applications that won't be cloned" -ForegroundColor Blue -BackgroundColor Black
+    Start-Sleep -Seconds 2
     Get-ADDCCloningExcludedApplicationList -GenerateXML | Out-Null
 
     #Create clone config file
     Write-Host "Create clone config file" -ForegroundColor Blue -BackgroundColor Black
+    Start-Sleep -Seconds 2
     $Params = @{
         CloneComputerName   =   "DC03"
         Static              =   $true
@@ -1292,7 +1292,7 @@ Write-Host "Import DC02" -ForegroundColor Green -BackgroundColor Black
 $Params = @{
     Path                =   "E:\Export\DC02\Virtual Machines\$guid.vmcx"
     VirtualMachinePath  =   "E:\DC03"
-    VhdDestinationPath  =   "E:\DC03"
+    VhdDestinationPath  =   "E:\DC03\Virtual Hard Disks"
     SnapshotFilePath    =   "E:\DC03"
     SmartPagingFilePath =   "E:\DC03"
     Copy                =   $true
