@@ -632,7 +632,7 @@ function New-CustomVM {
             MemoryStartupBytes = 2GB
             Path = "E:\$VMName"
             Generation = 2
-            SwitchName = "Default Switch"
+            SwitchName = "PrivateLabSwitch"
         }
         New-VM @Params | Out-Null
 
@@ -776,7 +776,7 @@ Invoke-Command -VMName DC01 -Credential $localcred -ScriptBlock {
     Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding | Out-Null
 
     #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
-    Write-Host "Set IP Address" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Set IP Address" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         IPAddress = "192.168.10.10"
         DefaultGateway = "192.168.10.1"
@@ -785,7 +785,7 @@ Invoke-Command -VMName DC01 -Credential $localcred -ScriptBlock {
     }
     New-NetIPAddress @Params | Out-Null
 
-    Write-Host "Set DNS" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Set DNS" -ForegroundColor Blue -BackgroundColor Black
     #Configure DNS Settings
     $Params = @{
         ServerAddresses = "192.168.10.10"
@@ -794,11 +794,11 @@ Invoke-Command -VMName DC01 -Credential $localcred -ScriptBlock {
     Set-DNSClientServerAddress @Params | Out-Null
 
     #Install AD DS server role
-    Write-Host "Install AD DS Server Role" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Install AD DS Server Role" -ForegroundColor Blue -BackgroundColor Black
     Install-WindowsFeature -name AD-Domain-Services -IncludeManagementTools | Out-Null
 
     #Configure server as a domain controller
-    Write-Host "Configure server as a domain controller" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Configure server as a domain controller" -ForegroundColor Blue -BackgroundColor Black
     Install-ADDSForest -DomainName ad.contoso.com -DomainNetBIOSName AD -InstallDNS -Force -SafeModeAdministratorPassword (ConvertTo-SecureString "1Password" -AsPlainText -Force) -WarningAction SilentlyContinue | Out-Null
 }
 
@@ -822,10 +822,10 @@ Write-host "LogonUI is down! Server is good to go!" -ForegroundColor Green -Back
 #DC01 postinstall script
 Write-Host "DC01 postinstall script" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
-    Write-Host "Set DNS Forwarder" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Set DNS Forwarder" -ForegroundColor Blue -BackgroundColor Black
     Set-DnsServerForwarder -IPAddress "1.1.1.1" -PassThru | Out-Null
     #Create OU's
-    Write-Host "Create OU's" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Create OU's" -ForegroundColor Blue -BackgroundColor Black
     #Base OU
     New-ADOrganizationalUnit -Name "Contoso" -Path "DC=ad,DC=contoso,DC=com" | Out-Null
     #Devices
@@ -841,7 +841,7 @@ Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
     New-ADOrganizationalUnit -Name "SecurityGroups" -Path "OU=Groups,OU=Contoso,DC=ad,DC=contoso,DC=com" | Out-Null
     New-ADOrganizationalUnit -Name "DistributionLists" -Path "OU=Groups,OU=Contoso,DC=ad,DC=contoso,DC=com" | Out-Null
     #New admin user
-    Write-Host "New admin user" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "New admin user" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         Name = "Admin-John.Smith"
         AccountPassword = (ConvertTo-SecureString "1Password" -AsPlainText -Force)
@@ -855,7 +855,7 @@ Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
     Add-ADGroupMember -Identity "Domain Admins" -Members "Admin-John.Smith" | Out-Null
 
     #New domain user
-    Write-Host "New domain user" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "New domain user" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         Name = "John.Smith"
         AccountPassword = (ConvertTo-SecureString "1Password" -AsPlainText -Force)
@@ -871,7 +871,7 @@ Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
     Add-ADGroupMember -Identity "Remote Desktop Users" -Members "John.Smith" | Out-Null
 
     #Add Company SGs and add members to it
-    Write-Host "Add Company SGs and add members to it" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Add Company SGs and add members to it" -ForegroundColor Blue -BackgroundColor Black
     New-ADGroup -Name "All-Staff" -SamAccountName "All-Staff" -GroupCategory Security -GroupScope Global -DisplayName "All-Staff" -Path "OU=SecurityGroups,OU=Groups,OU=Contoso,DC=ad,DC=contoso,DC=com" -Description "Members of this group are employees of Contoso" | Out-Null
     Add-ADGroupMember -Identity "All-Staff" -Members "John.Smith" | Out-Null
 }
@@ -887,11 +887,11 @@ while ((Invoke-Command -VMName DHCP -Credential $localcred {"Test"} -ea Silently
 Write-Host "DHCP postinstall script" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -Credential $domaincred -VMName DHCP -ScriptBlock {
     #Disable IPV6
-    Write-Host "Disable IPV6" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Disable IPV6" -ForegroundColor Blue -BackgroundColor Black
     Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding | Out-Null
 
     #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
-    Write-Host "Set IP Address" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Set IP Address" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         IPAddress = "192.168.10.13"
         DefaultGateway = "192.168.10.1"
@@ -901,7 +901,7 @@ Invoke-Command -Credential $domaincred -VMName DHCP -ScriptBlock {
     New-NetIPAddress @Params | Out-Null
 
     #Configure DNS Settings
-    Write-Host "Configure DNS" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Configure DNS" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         ServerAddresses = "192.168.10.10"
         InterfaceIndex = (Get-NetAdapter).InterfaceIndex
@@ -909,7 +909,7 @@ Invoke-Command -Credential $domaincred -VMName DHCP -ScriptBlock {
     Set-DNSClientServerAddress @Params | Out-Null
 
     #Domain join
-    Write-Host "Domain join and restart" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Domain join and restart" -ForegroundColor Blue -BackgroundColor Black
     $usr = "ad\Administrator"
     $password = ConvertTo-SecureString "1Password" -AsPlainText -Force
     $cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $usr, $password
@@ -934,11 +934,11 @@ while ((Invoke-Command -VMName FS01 -Credential $localcred {"Test"} -ea Silently
 Write-Host "FS01 Networking and domain join" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -Credential $localcred -VMName FS01 -ScriptBlock {
     #Disable IPV6
-    Write-Host "Disable IPV6" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Disable IPV6" -ForegroundColor Blue -BackgroundColor Black
     Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding | Out-Null
 
     #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
-    Write-Host "Set IP Address" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Set IP Address" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         IPAddress = "192.168.10.14"
         DefaultGateway = "192.168.10.1"
@@ -948,7 +948,7 @@ Invoke-Command -Credential $localcred -VMName FS01 -ScriptBlock {
     New-NetIPAddress @Params | Out-Null
 
     #Configure DNS Settings
-    Write-Host "Configure DNS" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Configure DNS" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         ServerAddresses = "192.168.10.10"
         InterfaceIndex = (Get-NetAdapter).InterfaceIndex
@@ -956,7 +956,7 @@ Invoke-Command -Credential $localcred -VMName FS01 -ScriptBlock {
     Set-DNSClientServerAddress @Params | Out-Null
 
     #Domain Join
-    Write-Host "Domain Join" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Domain Join" -ForegroundColor Blue -BackgroundColor Black
     $usr = "ad\Administrator"
     $password = ConvertTo-SecureString "1Password" -AsPlainText -Force
     $cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $usr, $password
@@ -982,20 +982,20 @@ while ((Invoke-Command -VMName DHCP -Credential $domaincred {"Test"} -ea Silentl
 Write-Host "DHCP postinstall script" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -Credential $domaincred -VMName DHCP -ScriptBlock {
     #Install DCHP server role
-    Write-Host "Install DCHP server role" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Install DCHP server role" -ForegroundColor Blue -BackgroundColor Black
     Install-WindowsFeature DHCP -IncludeManagementTools | Out-Null
 
     #Add required DHCP security groups on server and restart service
-    Write-Host "Add required DHCP security groups on server and restart service" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Add required DHCP security groups on server and restart service" -ForegroundColor Blue -BackgroundColor Black
     netsh dhcp add securitygroups | Out-Null
     Restart-Service dhcpserver | Out-Null
 
     #Authorize DHCP Server in AD
-    Write-Host "Authorize DHCP Server in AD" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Authorize DHCP Server in AD" -ForegroundColor Blue -BackgroundColor Black
     Add-DhcpServerInDC -DnsName dhcp.ad.contoso.com | Out-Null
 
     #Notify Server Manager that DCHP installation is complete, since it doesn't do this automatically
-    Write-Host "Notify Server Manager that DCHP installation is complete, since it doesn't do this automatically" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Notify Server Manager that DCHP installation is complete, since it doesn't do this automatically" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         Path = "registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\ServerManager\Roles\12"
         Name = "ConfigurationState"
@@ -1004,19 +1004,19 @@ Invoke-Command -Credential $domaincred -VMName DHCP -ScriptBlock {
     Set-ItemProperty @Params | Out-Null
 
     #Configure DHCP Scope
-    Write-Host "Configure DHCP Scope" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Configure DHCP Scope" -ForegroundColor Blue -BackgroundColor Black
     Add-DhcpServerv4Scope -name "Corpnet" -StartRange 192.168.10.50 -EndRange 192.168.10.254 -SubnetMask 255.255.255.0 -State Active | Out-Null
 
     #Exclude address range
-    Write-Host "Exclude address range" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Exclude address range" -ForegroundColor Blue -BackgroundColor Black
     Add-DhcpServerv4ExclusionRange -ScopeID 192.168.10.0 -StartRange 192.168.10.1 -EndRange 192.168.10.49 | Out-Null
 
     #Specify default gateway 
-    Write-Host "Specify default gateway " -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Specify default gateway " -ForegroundColor Blue -BackgroundColor Black
     Set-DhcpServerv4OptionValue -OptionID 3 -Value 192.168.10.1 -ScopeID 192.168.10.0 -ComputerName dhcp.ad.contoso.com | Out-Null
 
     #Specify default DNS server
-    Write-Host "Specify default DNS server" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Specify default DNS server" -ForegroundColor Blue -BackgroundColor Black
     Set-DhcpServerv4OptionValue -DnsDomain ad.contoso.com -DnsServer 192.168.10.10 | Out-Null
 }
 
@@ -1031,23 +1031,23 @@ while ((Invoke-Command -VMName FS01 -Credential $domaincred {"Test"} -ea Silentl
 Write-Host "FS01 post-install" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -Credential $domaincred -VMName FS01 -ScriptBlock {
     #Bring data disk online
-    Write-Host "Bring data disk online" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Bring data disk online" -ForegroundColor Blue -BackgroundColor Black
     Initialize-Disk -Number 1 | Out-Null
     #Partition and format
-    Write-Host "Partition and format" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Partition and format" -ForegroundColor Blue -BackgroundColor Black
     New-Partition -DiskNumber 1 -UseMaximumSize | Format-Volume -FileSystem "NTFS" -NewFileSystemLabel "Data" | Out-Null
     #Set drive letter 
-    Write-Host "Set drive letter" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Set drive letter" -ForegroundColor Blue -BackgroundColor Black
     Set-Partition -DiskNumber 1 -PartitionNumber 2 -NewDriveLetter F | Out-Null
 
 
-    Write-Host "Install FS Feature" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Install FS Feature" -ForegroundColor Blue -BackgroundColor Black
     Install-WindowsFeature FS-FileServer  | Out-Null
 
-    Write-Host "Create NetworkShare folder" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Create NetworkShare folder" -ForegroundColor Blue -BackgroundColor Black
     New-Item "F:\Data\NetworkShare" -Type Directory | Out-Null
 
-    Write-Host "Create new SMB share" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Create new SMB share" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         Name = "NetworkShare"
         Path = "F:\Data\NetworkShare"
@@ -1057,7 +1057,7 @@ Invoke-Command -Credential $domaincred -VMName FS01 -ScriptBlock {
     }
     New-SmbShare @Params | Out-Null
 
-    Write-Host "Install and configure DFS Namespace" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Install and configure DFS Namespace" -ForegroundColor Blue -BackgroundColor Black
     Install-WindowsFeature FS-DFS-Namespace -IncludeManagementTools | Out-Null
     New-DfsnRoot -TargetPath "\\fs01.ad.contoso.com\NetworkShare" -Type DomainV2 -Path "\\ad.contoso.com\NetworkShare" | Out-Null
 }
@@ -1072,7 +1072,7 @@ while ((Invoke-Command -VMName DC01 -Credential $domaincred {"Test"} -ea Silentl
 #Group policy configuration
 Write-Host "Group policy configuration" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
-    Write-Host "Creating drive mapping GPO" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Creating drive mapping GPO" -ForegroundColor Blue -BackgroundColor Black
     #Create GPO
     $gpoOuObj=new-gpo -name "All Staff Mapped Drive"
 
@@ -1142,11 +1142,11 @@ while ((Invoke-Command -VMName DC02 -Credential $localcred {"Test"} -ea Silently
 Write-Host "DC02 Networking and domain join" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -Credential $localcred -VMName DC02 -ScriptBlock {
     #Disable IPV6
-    Write-Host "Disable IPV6" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Disable IPV6" -ForegroundColor Blue -BackgroundColor Black
     Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding | Out-Null
     
     #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
-    Write-Host "Set IP Address" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Set IP Address" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         IPAddress = "192.168.10.11"
         DefaultGateway = "192.168.10.1"
@@ -1156,7 +1156,7 @@ Invoke-Command -Credential $localcred -VMName DC02 -ScriptBlock {
     New-NetIPAddress @Params | Out-Null
 
     #Configure DNS Settings
-    Write-Host "Configure DNS" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Configure DNS" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         ServerAddresses = "192.168.10.10"
         InterfaceIndex = (Get-NetAdapter).InterfaceIndex
@@ -1164,11 +1164,11 @@ Invoke-Command -Credential $localcred -VMName DC02 -ScriptBlock {
     Set-DNSClientServerAddress @Params | Out-Null
 
     #Install AD DS server role
-    Write-Host "Install AD DS Server Role" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Install AD DS Server Role" -ForegroundColor Blue -BackgroundColor Black
     Install-WindowsFeature -name AD-Domain-Services -IncludeManagementTools | Out-Null
 
     #Promote to DC
-    Write-Host "Promote to DC" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Promote to DC" -ForegroundColor Blue -BackgroundColor Black
     $dc02usr = "ad\Administrator"
     $dc02password = ConvertTo-SecureString "1Password" -AsPlainText -Force
     $dc02cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $dc02usr, $dc02password
@@ -1186,15 +1186,15 @@ while ((Invoke-Command -VMName CL01 -Credential $localcred {"Test"} -ea Silently
 Write-Host "CL01 Networking and domain join" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -Credential $localcred -VMName CL01 -ScriptBlock {
     #Disable IPV6
-    Write-Host "Disable IPV6" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Disable IPV6" -ForegroundColor Blue -BackgroundColor Black
     Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding | Out-Null
     
-    Write-Host "Get a new DHCP lease" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Get a new DHCP lease" -ForegroundColor Blue -BackgroundColor Black
     ipconfig /release | Out-Null
     ipconfig /renew | Out-Null
 
     #Domain join and restart
-    Write-Host "Domain join and restart" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Domain join and restart" -ForegroundColor Blue -BackgroundColor Black
     $usr = "ad\Administrator"
     $password = ConvertTo-SecureString "1Password" -AsPlainText -Force
     $cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $usr, $password
@@ -1219,24 +1219,24 @@ while ((Invoke-Command -VMName DC02 -Credential $domaincred {"Test"} -ea Silentl
 Write-Host "DC02 cloning to DC03" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -Credential $domaincred -VMName DC02 -ScriptBlock {
     #Add to Cloneable Domain Controllers
-    Write-Host "Add to Cloneable Domain Controllers" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Add to Cloneable Domain Controllers" -ForegroundColor Blue -BackgroundColor Black
     Add-ADGroupMember -Identity "Cloneable Domain Controllers" -Members "CN=DC02,OU=Domain Controllers,DC=ad,DC=contoso,DC=com" | Out-Null
 
     #Wait for DC02 to show up in the Cloneable Domain Controllers group
     Write-Host "Wait for DC02 to show up in the Cloneable Domain Controllers group" -ForegroundColor Green -BackgroundColor Black
     while ((Get-ADGroupMember -Identity "Cloneable Domain Controllers").name -NotMatch "DC02") {
-        Write-Host "Still waiting..." -ForegroundColor Teal -BackgroundColor Black
+        Write-Host "Still waiting..." -ForegroundColor Blue -BackgroundColor Black
         Start-Sleep -Seconds 5
     } 
-    Write-Host "DC02 found in Cloneable Domain Controllers, moving on" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "DC02 found in Cloneable Domain Controllers, moving on" -ForegroundColor Blue -BackgroundColor Black
 
     #List of applications that won't be cloned
-    Write-Host "List of applications that won't be cloned" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "List of applications that won't be cloned" -ForegroundColor Blue -BackgroundColor Black
     Start-Sleep -Seconds 2
     Get-ADDCCloningExcludedApplicationList -GenerateXML | Out-Null
 
     #Create clone config file
-    Write-Host "Create clone config file" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Create clone config file" -ForegroundColor Blue -BackgroundColor Black
     Start-Sleep -Seconds 2
     $Params = @{
         CloneComputerName   =   "DC03"
@@ -1249,7 +1249,7 @@ Invoke-Command -Credential $domaincred -VMName DC02 -ScriptBlock {
     New-ADDCCloneConfigFile @Params | Out-Null
 
     #Shutdown DC02
-    Write-Host "Shutdown DC02" -ForegroundColor Teal -BackgroundColor Black
+    Write-Host "Shutdown DC02" -ForegroundColor Blue -BackgroundColor Black
     Stop-Computer -Force | Out-Null
 }
 
