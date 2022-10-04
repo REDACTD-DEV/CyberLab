@@ -911,6 +911,59 @@ Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
     Add-ADGroupMember -Identity "All-Staff" -Members "John.Smith"
 }
 
+##Clone DC01 into DC02
+Write-Host "#Clone DC01 into DC02" -ForegroundColor Green -BackgroundColor Black
+Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
+    #Add to Cloneable Domain Controllers
+    Add-ADGroupMember -Identity "Cloneable Domain Controllers" -Members "CN=DC01,OU=Domain Controllers,DC=ad,DC=contoso,DC=com"
+
+    #List of applications that won't be cloned
+    Get-ADDCCloningExcludedApplicationList -GenerateXML
+
+    #Create clone config file
+    $Params = @{
+        CloneComputerName   =   "DC02"
+        Static              =   $true
+        IPv4Address         =   "192.168.10.11"
+        IPv4SubnetMask      =   "255.255.255.0"
+        IPv4DefaultGateway  =   "192.168.10.1"
+        IPv4DNSResolver     =   "192.168.10.10"
+    }
+    New-ADDCCloneConfigFile @Params
+
+    #Shutdown DC01
+    Stop-Computer -Force
+}
+#Check DC01 is shutdown
+while (Get-VM  "DC01" | where State -ne "Off")
+    {
+        write-host "waiting for DC01 to shutdown..."
+        start-sleep -Seconds 5
+    }
+
+
+Export-VM -Name "DC01" -Path E:\Export
+Start-VM -Name "DC01"
+$guid = (Get-VM "DC01").vmid.guid.ToUpper()
+New-Item -Type Directory -Path "E:\DC02"
+$Params = @{
+    Path                =   "E:\Export\DC01\Virtual Machines\$guid.vmcx"
+    VirtualMachinePath  =   "E:\DC02"
+    VhdDestinationPath  =   "E:\DC02"
+    SnapshotFilePath    =   "E:\DC02"
+    SmartPagingFilePath =   "E:\DC02"
+    Copy                =   $true
+    GenerateNewId       =   $true
+}
+Import-VM @Params
+Get-VM DC01 | Where State -eq "Off" | Rename-VM -NewName DC02
+
+Remove-Item -Recurse E:\Export\
+
+Wait-ForAD
+
+Start-VM -Name "DC02"
+
 #Wait for DHCP to respond to PowerShell Direct
 Write-Host "Wait for DHCP to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
 while ((Invoke-Command -VMName DHCP -Credential $localcred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 1}
@@ -1136,73 +1189,15 @@ $data = @"
     set-GPRegistryValue @Params
 }
 
-#Wait for DC01 to respond to PowerShell Direct
-Write-Host "Wait for DC01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((Invoke-Command -VMName DC01 -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 1}
-
-##Clone DC01 into DC02
-Write-Host "#Clone DC01 into DC02" -ForegroundColor Green -BackgroundColor Black
-Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
-    #Add to Cloneable Domain Controllers
-    Add-ADGroupMember -Identity "Cloneable Domain Controllers" -Members "CN=DC01,OU=Domain Controllers,DC=ad,DC=contoso,DC=com"
-
-    #List of applications that won't be cloned
-    Get-ADDCCloningExcludedApplicationList -GenerateXML
-
-    #Create clone config file
-    $Params = @{
-        CloneComputerName   =   "DC02"
-        Static              =   $true
-        IPv4Address         =   "192.168.10.11"
-        IPv4SubnetMask      =   "255.255.255.0"
-        IPv4DefaultGateway  =   "192.168.10.1"
-        IPv4DNSResolver     =   "192.168.10.10"
-    }
-    New-ADDCCloneConfigFile @Params
-
-    #Shutdown DC01
-    Stop-Computer -Force
-}
-#Check DC01 is shutdown
-while (Get-VM  "DC01" | where State -ne "Off")
-    {
-        write-host "waiting for DC01 to shutdown..."
-        start-sleep -Seconds 5
-    }
-
-
-Export-VM -Name "DC01" -Path E:\Export
-Start-VM -Name "DC01"
-$guid = (Get-VM "DC01").vmid.guid.ToUpper()
-New-Item -Type Directory -Path "E:\DC02"
-$Params = @{
-    Path                =   "E:\Export\DC01\Virtual Machines\$guid.vmcx"
-    VirtualMachinePath  =   "E:\DC02"
-    VhdDestinationPath  =   "E:\DC02"
-    SnapshotFilePath    =   "E:\DC02"
-    SmartPagingFilePath =   "E:\DC02"
-    Copy                =   $true
-    GenerateNewId       =   $true
-}
-Import-VM @Params
-Get-VM DC01 | Where State -eq "Off" | Rename-VM -NewName DC02
-
-Remove-Item -Recurse E:\Export\
-
-Wait-ForAD
-
-Start-VM -Name "DC02"
-
-Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
-    Remove-ADGroupMember -Identity "Cloneable Domain Controllers" -Members "CN=DC01,OU=Domain Controllers,DC=ad,DC=contoso,DC=com","CN=DC02,OU=Domain Controllers,DC=ad,DC=contoso,DC=com"
-}
-
 #Wait for CL01 to respond to PowerShell Direct
 Write-Host "Wait for CL01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
 while ((Invoke-Command -VMName CL01 -Credential $localcred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 1}
 
 Invoke-Command -Credential $localcred -VMName CL01 -ScriptBlock {
     $Params = @{
+        $usr = "ad\Administrator"
+        $password = ConvertTo-SecureString "1Password" -AsPlainText -Force
+        $cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $usr, $password
         DomainName = "ad.contoso.com"
         OUPath = "OU=Workstations,OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
         Credential = "ad.contoso.com\Administrator"
