@@ -635,7 +635,6 @@ $VMConfigs = @(
     [PSCustomObject]@{Name = "FS01"; Type = "Server"}
     [PSCustomObject]@{Name = "WSUS"; Type = "Server"}
     [PSCustomObject]@{Name = "CL01"; Type = "Client"}
-    
 )
 
 function New-CustomVM {
@@ -794,6 +793,7 @@ function Wait-ForServer {
 	param(
 		[Parameter()]
 		[String]$VMName
+    )
 #Wait for $VMName to respond to PowerShell Direct
 Write-Host "Wait for $VMName to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
 while ((Invoke-Command -VMName $VMName -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {Start-Sleep -Seconds 1}
