@@ -613,6 +613,7 @@ $VMConfigs = @(
     [PSCustomObject]@{Name = "WSUS"; Type = "Server"}
     [PSCustomObject]@{Name = "CL01"; Type = "Client"}
     [PSCustomObject]@{Name = "DC02"; Type = "Server"}
+    [PSCustomObject]@{Name = "WEB01"; Type = "Server"}
 )
 
 function New-CustomVM {
@@ -754,6 +755,9 @@ Write-Host "Deploy CL01" -ForegroundColor Green -BackgroundColor Black
 New-CustomVM -VMName $VMConfigs.Name[4] -Type $VMConfigs.Type[4] | Out-Null
 Write-Host "Deploy DC02" -ForegroundColor Green -BackgroundColor Black
 New-CustomVM -VMName $VMConfigs.Name[5] -Type $VMConfigs.Type[5] | Out-Null
+Write-Host "Deploy WEB01" -ForegroundColor Green -BackgroundColor Black
+New-CustomVM -VMName $VMConfigs.Name[6] -Type $VMConfigs.Type[6] | Out-Null
+
 
 
 $localusr = "Administrator"
@@ -884,8 +888,8 @@ while ((Invoke-Command -VMName DHCP -Credential $localcred {"Test"} -ea Silently
 }
 
 #DHCP configure networking and domain join
-Write-Host "DHCP postinstall script" -ForegroundColor Green -BackgroundColor Black
-Invoke-Command -Credential $domaincred -VMName DHCP -ScriptBlock {
+Write-Host "DHCP Networking and domain join" -ForegroundColor Green -BackgroundColor Black
+Invoke-Command -Credential $localcred -VMName DHCP -ScriptBlock {
     #Disable IPV6
     Write-Host "Disable IPV6" -ForegroundColor Blue -BackgroundColor Black
     Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding | Out-Null
@@ -970,6 +974,45 @@ Invoke-Command -Credential $localcred -VMName FS01 -ScriptBlock {
     Add-Computer @Params | Out-Null
 }
 
+#WEB01 configure networking and domain join
+Write-Host "WEB01 postinstall script" -ForegroundColor Green -BackgroundColor Black
+Invoke-Command -Credential $localcred -VMName WEB01 -ScriptBlock {
+    #Disable IPV6
+    Write-Host "Disable IPV6" -ForegroundColor Blue -BackgroundColor Black
+    Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding | Out-Null
+
+    #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
+    Write-Host "Set IP Address" -ForegroundColor Blue -BackgroundColor Black
+    $Params = @{
+        IPAddress = "192.168.10.15"
+        DefaultGateway = "192.168.10.1"
+        PrefixLength = "24"
+        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
+    }
+    New-NetIPAddress @Params | Out-Null
+
+    #Configure DNS Settings
+    Write-Host "Configure DNS" -ForegroundColor Blue -BackgroundColor Black
+    $Params = @{
+        ServerAddresses = "192.168.10.10"
+        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
+    }
+    Set-DNSClientServerAddress @Params | Out-Null
+
+    #Domain join
+    Write-Host "Domain join and restart" -ForegroundColor Blue -BackgroundColor Black
+    $usr = "ad\Administrator"
+    $password = ConvertTo-SecureString "1Password" -AsPlainText -Force
+    $cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $usr, $password
+    $Params = @{
+	    DomainName = "ad.contoso.com"
+	    OUPath = "OU=Servers,OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
+	    Credential = $cred
+	    Force = $true
+	    Restart = $true
+    }
+    Add-Computer @Params | Out-Null
+}
 
 #Wait for DHCP to respond to PowerShell Direct
 Write-Host "Wait for DHCP to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
@@ -1060,6 +1103,21 @@ Invoke-Command -Credential $domaincred -VMName FS01 -ScriptBlock {
     Write-Host "Install and configure DFS Namespace" -ForegroundColor Blue -BackgroundColor Black
     Install-WindowsFeature FS-DFS-Namespace -IncludeManagementTools | Out-Null
     New-DfsnRoot -TargetPath "\\fs01.ad.contoso.com\NetworkShare" -Type DomainV2 -Path "\\ad.contoso.com\NetworkShare" | Out-Null
+}
+
+#Wait for WEB01 to respond to PowerShell Direct
+Write-Host "Wait for WEB01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
+while ((Invoke-Command -VMName WEB01 -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {
+    Write-Host "Still waiting..." -ForegroundColor Green -BackgroundColor Black
+    Start-Sleep -Seconds 5
+}
+
+#WEB01 post-install
+Write-Host "WEB01 post-install" -ForegroundColor Green -BackgroundColor Black
+Invoke-Command -Credential $domaincred -VMName WEB01 -ScriptBlock {
+    #Install IIS role
+    Write-Host "Install IIS role" -ForegroundColor Blue -BackgroundColor Black
+    Install-WindowsFeature -name "Web-Server" -IncludeAllSubFeature ‑IncludeManagementTools
 }
 
 #Wait for DC01 to respond to PowerShell Direct
