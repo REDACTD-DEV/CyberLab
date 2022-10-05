@@ -1208,7 +1208,23 @@ Invoke-Command -Credential $localcred -VMName CL01 -ScriptBlock {
     Add-Computer @Params | Out-Null
 }
 
-#Clone DC02 to DC03
+#Clone DC01 to DC03
+Write-Host "Ensure both domain controllers are up before bringing DC01 down to clone" -ForegroundColor Green -BackgroundColor Black
+#Wait for DC01 to respond to PowerShell Direct
+Write-Host "Wait for DC01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
+while ((Invoke-Command -VMName DC01 -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {
+    Write-Host "Still waiting..." -ForegroundColor Green -BackgroundColor Black
+    Start-Sleep -Seconds 5
+}
+
+Invoke-Command -VMName DC01 -Credential $domaincred -ScriptBlock {
+    while ((Get-Process | Where-Object ProcessName -eq "LogonUI") -ne $null) {
+        Start-Sleep 5
+        Write-Host "LogonUI still processing..." -ForegroundColor Green -BackgroundColor Black
+    }
+Write-host "LogonUI is down! Server is good to go!" -ForegroundColor Green -BackgroundColor Black
+}
+
 #Wait for DC02 to respond to PowerShell Direct
 Write-Host "Wait for DC02 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
 while ((Invoke-Command -VMName DC02 -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {
@@ -1216,67 +1232,97 @@ while ((Invoke-Command -VMName DC02 -Credential $domaincred {"Test"} -ea Silentl
     Start-Sleep -Seconds 5
 }
 
-Write-Host "DC02 cloning to DC03" -ForegroundColor Green -BackgroundColor Black
-Invoke-Command -Credential $domaincred -VMName DC02 -ScriptBlock {
+Invoke-Command -VMName DC02 -Credential $domaincred -ScriptBlock {
+    while ((Get-Process | Where-Object ProcessName -eq "LogonUI") -ne $null) {
+        Start-Sleep 5
+        Write-Host "LogonUI still processing..." -ForegroundColor Green -BackgroundColor Black
+    }
+Write-host "LogonUI is down! Server is good to go!" -ForegroundColor Green -BackgroundColor Black
+}
+
+Write-Host "DC01 cloning to DC03" -ForegroundColor Green -BackgroundColor Black
+Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
     #Add to Cloneable Domain Controllers
     Write-Host "Add to Cloneable Domain Controllers" -ForegroundColor Blue -BackgroundColor Black
-    Add-ADGroupMember -Identity "Cloneable Domain Controllers" -Members "CN=DC02,OU=Domain Controllers,DC=ad,DC=contoso,DC=com" | Out-Null
+    Add-ADGroupMember -Identity "Cloneable Domain Controllers" -Members "CN=DC01,OU=Domain Controllers,DC=ad,DC=contoso,DC=com" | Out-Null
+    Start-Sleep 5
 
-    #Wait for DC02 to show up in the Cloneable Domain Controllers group
-    Write-Host "Wait for DC02 to show up in the Cloneable Domain Controllers group" -ForegroundColor Green -BackgroundColor Black
-    while ((Get-ADGroupMember -Identity "Cloneable Domain Controllers").name -NotMatch "DC02") {
+    #Force a domain sync
+    Write-Host "Force a domain sync" -ForegroundColor Blue -BackgroundColor Black
+    repadmin /syncall /AdeP | out-null
+
+    #Wait for DC01 to show up in the Cloneable Domain Controllers group on DC01
+    Write-Host "Wait for DC01 to show up in the Cloneable Domain Controllers group on DC01" -ForegroundColor Green -BackgroundColor Black
+    while ((Get-ADGroupMember -Server "DC01" -Identity "Cloneable Domain Controllers").name -NotMatch "DC01") {
         Write-Host "Still waiting..." -ForegroundColor Blue -BackgroundColor Black
         Start-Sleep -Seconds 5
     } 
-    Write-Host "DC02 found in Cloneable Domain Controllers, moving on" -ForegroundColor Blue -BackgroundColor Black
+    Write-Host "DC01 found in Cloneable Domain Controllers on DC01, moving on" -ForegroundColor Blue -BackgroundColor Black
+    Start-Sleep 5
+
+    #Wait for DC01 to show up in the Cloneable Domain Controllers group on DC02
+    Write-Host "Wait for DC01 to show up in the Cloneable Domain Controllers group on DC02" -ForegroundColor Green -BackgroundColor Black
+    while ((Get-ADGroupMember -Server "DC02" -Identity "Cloneable Domain Controllers").name -NotMatch "DC01") {
+        Write-Host "Still waiting..." -ForegroundColor Blue -BackgroundColor Black
+        Start-Sleep -Seconds 5
+    } 
+    Write-Host "DC01 found in Cloneable Domain Controllers on DC02, moving on" -ForegroundColor Blue -BackgroundColor Black
+    Start-Sleep 5
 
     #List of applications that won't be cloned
     Write-Host "List of applications that won't be cloned" -ForegroundColor Blue -BackgroundColor Black
     Start-Sleep -Seconds 2
     Get-ADDCCloningExcludedApplicationList -GenerateXML | Out-Null
+    Start-Sleep 5
 
     #Create clone config file
     Write-Host "Create clone config file" -ForegroundColor Blue -BackgroundColor Black
-    Start-Sleep -Seconds 2
     $Params = @{
-        CloneComputerName   =   "DC03"
-        Static              =   $true
-        IPv4Address         =   "192.168.10.12"
-        IPv4SubnetMask      =   "255.255.255.0"
-        IPv4DefaultGateway  =   "192.168.10.1"
-        IPv4DNSResolver     =   "192.168.10.10"
+    CloneComputerName   =   "DC03"
+    Static              =   $true
+    IPv4Address         =   "192.168.10.12"
+    IPv4SubnetMask      =   "255.255.255.0"
+    IPv4DefaultGateway  =   "192.168.10.1"
+    IPv4DNSResolver     =   "192.168.10.10"
     }
     New-ADDCCloneConfigFile @Params | Out-Null
 
-    #Shutdown DC02
-    Write-Host "Shutdown DC02" -ForegroundColor Blue -BackgroundColor Black
+    #Check the config file was created
+    while ((Test-Path -Path C:\Windows\NTDS\DCCloneConfig.xml) -eq $false) {
+        Write-Host "Config file not created, trying again..." -ForegroundColor Blue -BackgroundColor Black
+        New-ADDCCloneConfigFile @Params | Out-Null
+        Start-Sleep 5
+    }
+
+    #Shutdown DC01
+    Write-Host "Shutdown DC01" -ForegroundColor Blue -BackgroundColor Black
     Stop-Computer -Force | Out-Null
 }
 
-#Check DC02 is shutdown
-while ((Get-VM "DC02").State -ne "Off") {
-    Write-Host "Waiting for DC02 to shutdown..." -ForegroundColor Green -BackgroundColor Black
+#Check DC01 is shutdown
+while ((Get-VM "DC01").State -ne "Off") {
+    Write-Host "Waiting for DC01 to shutdown..." -ForegroundColor Green -BackgroundColor Black
     Start-Sleep -Seconds 2
 }
-Write-Host "DC02 is down, moving on" -ForegroundColor Green -BackgroundColor Black
+Write-Host "DC01 is down, moving on" -ForegroundColor Green -BackgroundColor Black
 
 #Export VM
 Write-Host "Export VM" -ForegroundColor Green -BackgroundColor Black
-Export-VM -Name "DC02" -Path E:\Export | Out-Null
+Export-VM -Name "DC01" -Path E:\Export | Out-Null
 
-#Start DC02
-Write-Host "Start DC02" -ForegroundColor Green -BackgroundColor Black
-Start-VM -Name "DC02" | Out-Null
+#Start DC01
+Write-Host "Start DC01" -ForegroundColor Green -BackgroundColor Black
+Start-VM -Name "DC01" | Out-Null
 
 #New directory for DC03
 Write-Host "New directory for DC03" -ForegroundColor Green -BackgroundColor Black
-$guid = (Get-VM "DC02").vmid.guid.ToUpper()
+$guid = (Get-VM "DC01").vmid.guid.ToUpper()
 New-Item -Type Directory -Path "E:\DC03" | Out-Null
 
-#Import DC02
-Write-Host "Import DC02" -ForegroundColor Green -BackgroundColor Black
+#Import DC01
+Write-Host "Import DC01" -ForegroundColor Green -BackgroundColor Black
 $Params = @{
-    Path                =   "E:\Export\DC02\Virtual Machines\$guid.vmcx"
+    Path                =   "E:\Export\DC01\Virtual Machines\$guid.vmcx"
     VirtualMachinePath  =   "E:\DC03"
     VhdDestinationPath  =   "E:\DC03\Virtual Hard Disks"
     SnapshotFilePath    =   "E:\DC03"
@@ -1286,9 +1332,32 @@ $Params = @{
 }
 Import-VM @Params | Out-Null
 
-#Rename DC02 to DC03
-Write-Host "Rename DC02 to DC03" -ForegroundColor Green -BackgroundColor Black
-Get-VM DC02 | Where-Object State -eq "Off" | Rename-VM -NewName DC03 | Out-Null
+#Rename DC01 to DC03
+Write-Host "Rename DC01 to DC03" -ForegroundColor Green -BackgroundColor Black
+Get-VM DC01 | Where-Object State -eq "Off" | Rename-VM -NewName DC03 | Out-Null
+
+Write-Host "Ensure both domain controllers are up before bringing DC03 up" -ForegroundColor Green -BackgroundColor Black
+#Wait for DC01 to respond to PowerShell Direct
+Write-Host "Wait for DC01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
+while ((Invoke-Command -VMName DC01 -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {
+    Write-Host "Still waiting..." -ForegroundColor Green -BackgroundColor Black
+    Start-Sleep -Seconds 5
+}
+
+Invoke-Command -VMName DC01 -Credential $domaincred -ScriptBlock {
+    while ((Get-Process | Where-Object ProcessName -eq "LogonUI") -ne $null) {
+        Start-Sleep 5
+        Write-Host "LogonUI still processing..." -ForegroundColor Green -BackgroundColor Black
+    }
+Write-host "LogonUI is down! Server is good to go!" -ForegroundColor Green -BackgroundColor Black
+}
+
+#Wait for DC02 to respond to PowerShell Direct
+Write-Host "Wait for DC02 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
+while ((Invoke-Command -VMName DC02 -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {
+    Write-Host "Still waiting..." -ForegroundColor Green -BackgroundColor Black
+    Start-Sleep -Seconds 5
+}
 
 #Start DC03
 Write-Host "Start DC03" -ForegroundColor Green -BackgroundColor Black
