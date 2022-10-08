@@ -657,7 +657,11 @@ function New-CustomVM {
             RelativeWeight = 100
         }
         Set-VMProcessor @Params | Out-Null
-
+	
+	#Configure vTPM
+	Write-Host "Configure vTPM for $VMName" -ForegroundColor Magenta -BackgroundColor Black
+	Enable-VMTPM -VMName $VMName | Out-Null
+	
         #Add Installer ISO
         Write-Host "Setting Install ISO for $VMName" -ForegroundColor Magenta -BackgroundColor Black
         $Params = @{
