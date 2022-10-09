@@ -643,11 +643,15 @@ function New-CustomVM {
             Name = $VMName
             ProcessorCount = 4
             DynamicMemory = $true
-            MemoryMinimumBytes = 1GB
+            MemoryMinimumBytes = 2GB
             MemoryMaximumBytes = 8GB
         }
         Set-VM @Params | Out-Null
-	
+
+        #Remove Existing Network Adapters
+        Write-Host "Remove existing network adapters for $VMName" -ForegroundColor Magenta -BackgroundColor Black	
+        Get-VMNetworkAdapter -VMName $VMName | Remove-VMNetworkAdapter
+
         #Add Network Adapter
         Write-Host "Add Network Adapter for $VMName" -ForegroundColor Magenta -BackgroundColor Black	
 	$Params = @{
@@ -655,14 +659,20 @@ function New-CustomVM {
             SwitchName = "ExternalLabSwitch"
             Name = "External"
         }
-	if($VMName -eq "GW01") {Add-VMNetworkAdapter @Params | Out-Null}
+	if($VMName -eq "GW01") {
+        Add-VMNetworkAdapter @Params | Out-Null   
+    }
 	
 	$Params = @{
             VMName = $VMName
             SwitchName = "PrivateLabSwitch"
             Name = "Internal"
         }
-	Add-VMNetworkAdapter @Params | Out-Null
+	Add-VMNetworkAdapter @Params
+    
+    #Turn network device naming on 
+    Get-VMNetworkAdapter -VMName $VMName | Set-VMNetworkAdapter -DeviceNaming On
+    
 
         #Specify CPU settings
         Write-Host "Running Set-VMProcessor for $VMName" -ForegroundColor Magenta -BackgroundColor Black
@@ -801,27 +811,31 @@ Invoke-Command -VMName DC01 -Credential $localcred -ScriptBlock {
     #Disable IPV6
     Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding | Out-Null
 
+    #Rename network adapter inside VM
+    Write-Host "Rename network adapter inside VM" -ForegroundColor Blue -BackgroundColor Black
+    foreach ($NetworkAdapter in (Get-NetAdapterAdvancedProperty -DisplayName "Hyper-V Network Adapter Name" | Where-Object DisplayValue -NotLike "")) {
+        $NetworkAdapter | Rename-NetAdapter -NewName $NetworkAdapter.DisplayValue -Verbose
+    } 
+
     #Set IP Address
     Write-Host "Set IP Address" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         IPAddress = "192.168.10.10"
         DefaultGateway = "192.168.10.1"
         PrefixLength = "24"
-        InterfaceAlias = "Internal"
     }
-    New-NetIPAddress @Params | Out-Null
+    Get-NetAdapter -Name "Internal" | New-NetIPAddress @Params | Out-Null
 
     Write-Host "Set DNS" -ForegroundColor Blue -BackgroundColor Black
     #Configure DNS Settings
     $Params = @{
         ServerAddresses = "192.168.10.10"
-        InterfaceAlias = "Internal"
     }
-    Set-DNSClientServerAddress @Params | Out-Null
+    Get-NetAdapter -Name "Internal" | Set-DNSClientServerAddress @Params | Out-Null
     
     #Install BitLocker
-    Write-Host "Install BitLocker" -ForegroundColor Blue -BackgroundColor Black
-    Install-WindowsFeature BitLocker -IncludeAllSubFeature -IncludeManagementTools | Out-Null
+    #Write-Host "Install BitLocker" -ForegroundColor Blue -BackgroundColor Black
+    #Install-WindowsFeature BitLocker -IncludeAllSubFeature -IncludeManagementTools | Out-Null
 
     #Install AD DS server role
     Write-Host "Install AD DS Server Role" -ForegroundColor Blue -BackgroundColor Black
@@ -879,6 +893,11 @@ Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
         ChangePasswordAtLogon = $true
         DisplayName = "John Smith - Admin"
         Path = "OU=Admins,OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com"
+
+    #Add to Cloneable Domain Controllers
+    #Doing this now so it has time to replicate before the cloning process further down the script
+    Write-Host "Add to Cloneable Domain Controllers" -ForegroundColor Blue -BackgroundColor Black
+    Add-ADGroupMember -Identity "Cloneable Domain Controllers" -Members "CN=DC01,OU=Domain Controllers,DC=ad,DC=contoso,DC=com" | Out-Null
     }
     New-ADUser @Params | Out-Null
     #Add admin to Domain Admins group
@@ -920,23 +939,29 @@ Invoke-Command -Credential $localcred -VMName GW01 -ScriptBlock {
     Write-Host "Disable IPV6" -ForegroundColor Blue -BackgroundColor Black
     Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding | Out-Null
 
+    #Rename network adapter inside VM
+    Write-Host "Rename network adapter inside VM" -ForegroundColor Blue -BackgroundColor Black
+    foreach ($NetworkAdapter in (Get-NetAdapterAdvancedProperty -DisplayName "Hyper-V Network Adapter Name" | Where-Object DisplayValue -NotLike "")) {
+        $NetworkAdapter | Rename-NetAdapter -NewName $NetworkAdapter.DisplayValue -Verbose
+    } 
+
     #Set IP Address
     Write-Host "Set IP Address" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         IPAddress = "192.168.10.1"
         DefaultGateway = "192.168.10.1"
         PrefixLength = "24"
-        InterfaceAlias = "Internal"
     }
-    New-NetIPAddress @Params | Out-Null
+    Get-NetAdapter -Name "Internal" | New-NetIPAddress @Params | Out-Null
 
     #Configure DNS Settings
     Write-Host "Configure DNS" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         ServerAddresses = "192.168.10.10"
-        InterfaceAlias = "Internal"
     }
-    Set-DNSClientServerAddress @Params | Out-Null
+    Get-NetAdapter -Name "Internal" | Set-DNSClientServerAddress @Params | Out-Null
+
+    Install-WindowsFeature Routing -IncludeManagementTools
 
     #Domain join
     Write-Host "Domain join and restart" -ForegroundColor Blue -BackgroundColor Black
@@ -967,23 +992,27 @@ Invoke-Command -Credential $localcred -VMName DHCP -ScriptBlock {
     Write-Host "Disable IPV6" -ForegroundColor Blue -BackgroundColor Black
     Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding | Out-Null
 
+    #Rename network adapter inside VM
+    Write-Host "Rename network adapter inside VM" -ForegroundColor Blue -BackgroundColor Black
+    foreach ($NetworkAdapter in (Get-NetAdapterAdvancedProperty -DisplayName "Hyper-V Network Adapter Name" | Where-Object DisplayValue -NotLike "")) {
+        $NetworkAdapter | Rename-NetAdapter -NewName $NetworkAdapter.DisplayValue -Verbose
+    } 
+
     #Set IP Address
     Write-Host "Set IP Address" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         IPAddress = "192.168.10.13"
         DefaultGateway = "192.168.10.1"
         PrefixLength = "24"
-        InterfaceAlias = "Internal"
     }
-    New-NetIPAddress @Params | Out-Null
+    Get-NetAdapter -Name "Internal" | New-NetIPAddress @Params | Out-Null
 
     #Configure DNS Settings
     Write-Host "Configure DNS" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         ServerAddresses = "192.168.10.10"
-        InterfaceAlias = "Internal"
     }
-    Set-DNSClientServerAddress @Params | Out-Null
+    Get-NetAdapter -Name "Internal" | Set-DNSClientServerAddress @Params | Out-Null
 
     #Domain join
     Write-Host "Domain join and restart" -ForegroundColor Blue -BackgroundColor Black
@@ -1014,23 +1043,27 @@ Invoke-Command -Credential $localcred -VMName FS01 -ScriptBlock {
     Write-Host "Disable IPV6" -ForegroundColor Blue -BackgroundColor Black
     Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding | Out-Null
 
+    #Rename network adapter inside VM
+    Write-Host "Rename network adapter inside VM" -ForegroundColor Blue -BackgroundColor Black
+    foreach ($NetworkAdapter in (Get-NetAdapterAdvancedProperty -DisplayName "Hyper-V Network Adapter Name" | Where-Object DisplayValue -NotLike "")) {
+        $NetworkAdapter | Rename-NetAdapter -NewName $NetworkAdapter.DisplayValue -Verbose
+    } 
+
     #Set IP Address
     Write-Host "Set IP Address" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         IPAddress = "192.168.10.14"
         DefaultGateway = "192.168.10.1"
         PrefixLength = "24"
-        InterfaceAlias = "Internal"
     }
-    New-NetIPAddress @Params | Out-Null
+    Get-NetAdapter -Name "Internal" | New-NetIPAddress @Params | Out-Null
 
     #Configure DNS Settings
     Write-Host "Configure DNS" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         ServerAddresses = "192.168.10.10"
-        InterfaceAlias = "Internal"
     }
-    Set-DNSClientServerAddress @Params | Out-Null
+    Get-NetAdapter -Name "Internal" | Set-DNSClientServerAddress @Params | Out-Null
 
     #Domain Join
     Write-Host "Domain Join" -ForegroundColor Blue -BackgroundColor Black
@@ -1054,23 +1087,27 @@ Invoke-Command -Credential $localcred -VMName WEB01 -ScriptBlock {
     Write-Host "Disable IPV6" -ForegroundColor Blue -BackgroundColor Black
     Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding | Out-Null
 
+    #Rename network adapter inside VM
+    Write-Host "Rename network adapter inside VM" -ForegroundColor Blue -BackgroundColor Black
+    foreach ($NetworkAdapter in (Get-NetAdapterAdvancedProperty -DisplayName "Hyper-V Network Adapter Name" | Where-Object DisplayValue -NotLike "")) {
+        $NetworkAdapter | Rename-NetAdapter -NewName $NetworkAdapter.DisplayValue -Verbose
+    } 
+
     #Set IP Address
     Write-Host "Set IP Address" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         IPAddress = "192.168.10.15"
         DefaultGateway = "192.168.10.1"
         PrefixLength = "24"
-        InterfaceAlias = "Internal"
     }
-    New-NetIPAddress @Params | Out-Null
+    Get-NetAdapter -Name "Internal" | New-NetIPAddress @Params | Out-Null
 
     #Configure DNS Settings
     Write-Host "Configure DNS" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         ServerAddresses = "192.168.10.10"
-        InterfaceAlias = "Internal"
     }
-    Set-DNSClientServerAddress @Params | Out-Null
+    Get-NetAdapter -Name "Internal" | Set-DNSClientServerAddress @Params | Out-Null
 
     #Domain join
     Write-Host "Domain join and restart" -ForegroundColor Blue -BackgroundColor Black
@@ -1096,9 +1133,7 @@ while ((Invoke-Command -VMName GW01 -Credential $domaincred {"Test"} -ea Silentl
 
 #GW01 post-install
 Write-Host "GW01 post-install" -ForegroundColor Green -BackgroundColor Black
-Invoke-Command -Credential $domaincred -VMName GW01 -ScriptBlock {
-	Install-WindowsFeature Routing -IncludeManagementTools
-	
+Invoke-Command -Credential $domaincred -VMName GW01 -ScriptBlock {	
 	Install-RemoteAccess -VpnType RoutingOnly -PassThru
 
 	$ExternalInterface="External"
@@ -1216,7 +1251,7 @@ Write-Host "WEB01 post-install" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -Credential $domaincred -VMName WEB01 -ScriptBlock {
     #Install IIS role
     Write-Host "Install IIS role" -ForegroundColor Blue -BackgroundColor Black
-    Install-WindowsFeature -name "Web-Server" -IncludeAllSubFeature ‑IncludeManagementTools
+    Install-WindowsFeature -name "Web-Server" -IncludeAllSubFeature -IncludeManagementTools
 }
 
 #Wait for DC01 to respond to PowerShell Direct
@@ -1302,6 +1337,12 @@ Invoke-Command -Credential $localcred -VMName DC02 -ScriptBlock {
     Write-Host "Disable IPV6" -ForegroundColor Blue -BackgroundColor Black
     Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding | Out-Null
     
+    #Rename network adapter inside VM
+    Write-Host "Rename network adapter inside VM" -ForegroundColor Blue -BackgroundColor Black
+    foreach ($NetworkAdapter in (Get-NetAdapterAdvancedProperty -DisplayName "Hyper-V Network Adapter Name" | Where-Object DisplayValue -NotLike "")) {
+        $NetworkAdapter | Rename-NetAdapter -NewName $NetworkAdapter.DisplayValue -Verbose
+    } 
+    
     #Set IP Address
     Write-Host "Set IP Address" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
@@ -1345,6 +1386,12 @@ Invoke-Command -Credential $localcred -VMName CL01 -ScriptBlock {
     #Disable IPV6
     Write-Host "Disable IPV6" -ForegroundColor Blue -BackgroundColor Black
     Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding | Out-Null
+
+    #Rename network adapter inside VM
+    Write-Host "Rename network adapter inside VM" -ForegroundColor Blue -BackgroundColor Black
+    foreach ($NetworkAdapter in (Get-NetAdapterAdvancedProperty -DisplayName "Hyper-V Network Adapter Name" | Where-Object DisplayValue -NotLike "")) {
+        $NetworkAdapter | Rename-NetAdapter -NewName $NetworkAdapter.DisplayValue -Verbose
+    } 
     
     Write-Host "Get a new DHCP lease" -ForegroundColor Blue -BackgroundColor Black
     ipconfig /release | Out-Null
@@ -1403,11 +1450,6 @@ Write-host "LogonUI is down! Server is good to go!" -ForegroundColor Green -Back
 
 Write-Host "DC01 cloning to DC03" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
-    #Add to Cloneable Domain Controllers
-    Write-Host "Add to Cloneable Domain Controllers" -ForegroundColor Blue -BackgroundColor Black
-    Add-ADGroupMember -Identity "Cloneable Domain Controllers" -Members "CN=DC01,OU=Domain Controllers,DC=ad,DC=contoso,DC=com" | Out-Null
-    Start-Sleep 5
-
     #Force a domain sync
     Write-Host "Force a domain sync" -ForegroundColor Blue -BackgroundColor Black
     repadmin /syncall /AdeP | out-null
@@ -1451,7 +1493,7 @@ Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
     #Check the config file was created
     while ((Test-Path -Path C:\Windows\NTDS\DCCloneConfig.xml) -eq $false) {
         Write-Host "Config file not created, trying again..." -ForegroundColor Blue -BackgroundColor Black
-        New-ADDCCloneConfigFile @Params | Out-Null
+        New-ADDCCloneConfigFile @Params -ea SilentlyContinue | Out-Null
         Start-Sleep 5
     }
 
