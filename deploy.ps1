@@ -643,7 +643,7 @@ function New-CustomVM {
             Name = $VMName
             ProcessorCount = 4
             DynamicMemory = $true
-            MemoryMinimumBytes = 2GB
+            MemoryMinimumBytes = 1GB
             MemoryMaximumBytes = 8GB
         }
         Set-VM @Params | Out-Null
@@ -655,7 +655,7 @@ function New-CustomVM {
             SwitchName = "ExternalLabSwitch"
             Name = "External"
         }
-	if($VMName -eq "GW01") {Add-VMNetworkAdapter @Params} | Out-Null
+	if($VMName -eq "GW01") {Add-VMNetworkAdapter @Params | Out-Null}
 	
 	$Params = @{
             VMName = $VMName
@@ -758,8 +758,7 @@ function New-CustomVM {
         $Order2 = Get-VMHardDiskDrive -VMName $VMName | Where-Object Path -Match "OS"
         $Order3 = Get-VMHardDiskDrive -VMName $VMName | Where-Object Path -Match "Data"
         $Order4 = Get-VMDvdDrive -VMName $VMName | Where-Object Path  -Match "unattend"
-        $Order5 = Get-VMNetworkAdapter -VMName $VMName
-        Set-VMFirmware -VMName $VMName -BootOrder $Order1, $Order2, $Order3, $Order4, $Order5 | Out-Null
+        Set-VMFirmware -VMName $VMName -BootOrder $Order1, $Order2, $Order3, $Order4 | Out-Null
         
         Write-Host "Starting $VMName" -ForegroundColor Magenta -BackgroundColor Black
         Start-VM -Name $VMName | Out-Null
@@ -802,13 +801,13 @@ Invoke-Command -VMName DC01 -Credential $localcred -ScriptBlock {
     #Disable IPV6
     Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding | Out-Null
 
-    #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
+    #Set IP Address
     Write-Host "Set IP Address" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         IPAddress = "192.168.10.10"
         DefaultGateway = "192.168.10.1"
         PrefixLength = "24"
-        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
+        InterfaceAlias = "Internal"
     }
     New-NetIPAddress @Params | Out-Null
 
@@ -816,7 +815,7 @@ Invoke-Command -VMName DC01 -Credential $localcred -ScriptBlock {
     #Configure DNS Settings
     $Params = @{
         ServerAddresses = "192.168.10.10"
-        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
+        InterfaceAlias = "Internal"
     }
     Set-DNSClientServerAddress @Params | Out-Null
     
@@ -921,20 +920,21 @@ Invoke-Command -Credential $localcred -VMName GW01 -ScriptBlock {
     Write-Host "Disable IPV6" -ForegroundColor Blue -BackgroundColor Black
     Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding | Out-Null
 
-    #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
+    #Set IP Address
     Write-Host "Set IP Address" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         IPAddress = "192.168.10.1"
         DefaultGateway = "192.168.10.1"
         PrefixLength = "24"
+        InterfaceAlias = "Internal"
     }
-    Get-NetAdapter -Name "Internal" | New-NetIPAddress @Params | Out-Null
+    New-NetIPAddress @Params | Out-Null
 
     #Configure DNS Settings
     Write-Host "Configure DNS" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         ServerAddresses = "192.168.10.10"
-        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
+        InterfaceAlias = "Internal"
     }
     Set-DNSClientServerAddress @Params | Out-Null
 
@@ -967,13 +967,13 @@ Invoke-Command -Credential $localcred -VMName DHCP -ScriptBlock {
     Write-Host "Disable IPV6" -ForegroundColor Blue -BackgroundColor Black
     Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding | Out-Null
 
-    #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
+    #Set IP Address
     Write-Host "Set IP Address" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         IPAddress = "192.168.10.13"
         DefaultGateway = "192.168.10.1"
         PrefixLength = "24"
-        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
+        InterfaceAlias = "Internal"
     }
     New-NetIPAddress @Params | Out-Null
 
@@ -981,7 +981,7 @@ Invoke-Command -Credential $localcred -VMName DHCP -ScriptBlock {
     Write-Host "Configure DNS" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         ServerAddresses = "192.168.10.10"
-        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
+        InterfaceAlias = "Internal"
     }
     Set-DNSClientServerAddress @Params | Out-Null
 
@@ -1014,13 +1014,13 @@ Invoke-Command -Credential $localcred -VMName FS01 -ScriptBlock {
     Write-Host "Disable IPV6" -ForegroundColor Blue -BackgroundColor Black
     Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding | Out-Null
 
-    #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
+    #Set IP Address
     Write-Host "Set IP Address" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         IPAddress = "192.168.10.14"
         DefaultGateway = "192.168.10.1"
         PrefixLength = "24"
-        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
+        InterfaceAlias = "Internal"
     }
     New-NetIPAddress @Params | Out-Null
 
@@ -1028,7 +1028,7 @@ Invoke-Command -Credential $localcred -VMName FS01 -ScriptBlock {
     Write-Host "Configure DNS" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         ServerAddresses = "192.168.10.10"
-        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
+        InterfaceAlias = "Internal"
     }
     Set-DNSClientServerAddress @Params | Out-Null
 
@@ -1054,13 +1054,13 @@ Invoke-Command -Credential $localcred -VMName WEB01 -ScriptBlock {
     Write-Host "Disable IPV6" -ForegroundColor Blue -BackgroundColor Black
     Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding | Out-Null
 
-    #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
+    #Set IP Address
     Write-Host "Set IP Address" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         IPAddress = "192.168.10.15"
         DefaultGateway = "192.168.10.1"
         PrefixLength = "24"
-        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
+        InterfaceAlias = "Internal"
     }
     New-NetIPAddress @Params | Out-Null
 
@@ -1068,7 +1068,7 @@ Invoke-Command -Credential $localcred -VMName WEB01 -ScriptBlock {
     Write-Host "Configure DNS" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         ServerAddresses = "192.168.10.10"
-        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
+        InterfaceAlias = "Internal"
     }
     Set-DNSClientServerAddress @Params | Out-Null
 
@@ -1302,13 +1302,13 @@ Invoke-Command -Credential $localcred -VMName DC02 -ScriptBlock {
     Write-Host "Disable IPV6" -ForegroundColor Blue -BackgroundColor Black
     Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding | Out-Null
     
-    #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
+    #Set IP Address
     Write-Host "Set IP Address" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         IPAddress = "192.168.10.11"
         DefaultGateway = "192.168.10.1"
         PrefixLength = "24"
-        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
+        InterfaceAlias = "Internal"
     }
     New-NetIPAddress @Params | Out-Null
 
@@ -1316,7 +1316,7 @@ Invoke-Command -Credential $localcred -VMName DC02 -ScriptBlock {
     Write-Host "Configure DNS" -ForegroundColor Blue -BackgroundColor Black
     $Params = @{
         ServerAddresses = "192.168.10.10"
-        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
+        InterfaceAlias = "Internal"
     }
     Set-DNSClientServerAddress @Params | Out-Null
 
