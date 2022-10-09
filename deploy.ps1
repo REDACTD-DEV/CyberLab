@@ -893,11 +893,6 @@ Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
         ChangePasswordAtLogon = $true
         DisplayName = "John Smith - Admin"
         Path = "OU=Admins,OU=Users,OU=Contoso,DC=ad,DC=contoso,DC=com"
-
-    #Add to Cloneable Domain Controllers
-    #Doing this now so it has time to replicate before the cloning process further down the script
-    Write-Host "Add to Cloneable Domain Controllers" -ForegroundColor Blue -BackgroundColor Black
-    Add-ADGroupMember -Identity "Cloneable Domain Controllers" -Members "CN=DC01,OU=Domain Controllers,DC=ad,DC=contoso,DC=com" | Out-Null
     }
     New-ADUser @Params | Out-Null
     #Add admin to Domain Admins group
@@ -923,6 +918,11 @@ Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
     Write-Host "Add Company SGs and add members to it" -ForegroundColor Blue -BackgroundColor Black
     New-ADGroup -Name "All-Staff" -SamAccountName "All-Staff" -GroupCategory Security -GroupScope Global -DisplayName "All-Staff" -Path "OU=SecurityGroups,OU=Groups,OU=Contoso,DC=ad,DC=contoso,DC=com" -Description "Members of this group are employees of Contoso" | Out-Null
     Add-ADGroupMember -Identity "All-Staff" -Members "John.Smith" | Out-Null
+
+    #Add to Cloneable Domain Controllers
+    #Doing this now so it has time to replicate before the cloning process further down the script
+    Write-Host "Add to Cloneable Domain Controllers" -ForegroundColor Blue -BackgroundColor Black
+    Add-ADGroupMember -Identity "Cloneable Domain Controllers" -Members "CN=DC01,OU=Domain Controllers,DC=ad,DC=contoso,DC=com" | Out-Null
 }
 
 #Wait for GW01 to respond to PowerShell Direct
