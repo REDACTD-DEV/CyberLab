@@ -614,6 +614,7 @@ $VMConfigs = @(
     [PSCustomObject]@{Name = "CL01"; Type = "Client"}
     [PSCustomObject]@{Name = "DC02"; Type = "Server"}
     [PSCustomObject]@{Name = "WEB01"; Type = "Server"}
+    [PSCustomObject]@{Name = "GW01"; Type = "Server"}
 )
 
 function New-CustomVM {
@@ -633,7 +634,6 @@ function New-CustomVM {
             MemoryStartupBytes = 2GB
             Path = "E:\$VMName"
             Generation = 2
-            SwitchName = "PrivateLabSwitch"
         }
         New-VM @Params | Out-Null
 
@@ -647,6 +647,22 @@ function New-CustomVM {
             MemoryMaximumBytes = 8GB
         }
         Set-VM @Params | Out-Null
+	
+        #Add Network Adapter
+        Write-Host "Add Network Adapter for $VMName" -ForegroundColor Magenta -BackgroundColor Black	
+	$Params = @{
+            Name = $VMName
+            SwitchName = "ExternalLabSwitch"
+            Name = "External"
+        }
+	if($VMName -eq "GW01") {Add-VMNetworkAdapter @Params}
+	
+	$Params = @{
+            Name = $VMName
+            SwitchName = "PrivateLabSwitch"
+            Name = "Internal"
+        }
+	Add-VMNetworkAdapter @Params
 
         #Specify CPU settings
         Write-Host "Running Set-VMProcessor for $VMName" -ForegroundColor Magenta -BackgroundColor Black
@@ -761,6 +777,8 @@ Write-Host "Deploy DC02" -ForegroundColor Green -BackgroundColor Black
 New-CustomVM -VMName $VMConfigs.Name[5] -Type $VMConfigs.Type[5] | Out-Null
 Write-Host "Deploy WEB01" -ForegroundColor Green -BackgroundColor Black
 New-CustomVM -VMName $VMConfigs.Name[6] -Type $VMConfigs.Type[6] | Out-Null
+Write-Host "Deploy GW01" -ForegroundColor Green -BackgroundColor Black
+New-CustomVM -VMName $VMConfigs.Name[7] -Type $VMConfigs.Type[7] | Out-Null
 
 
 
@@ -886,6 +904,52 @@ Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
     Write-Host "Add Company SGs and add members to it" -ForegroundColor Blue -BackgroundColor Black
     New-ADGroup -Name "All-Staff" -SamAccountName "All-Staff" -GroupCategory Security -GroupScope Global -DisplayName "All-Staff" -Path "OU=SecurityGroups,OU=Groups,OU=Contoso,DC=ad,DC=contoso,DC=com" -Description "Members of this group are employees of Contoso" | Out-Null
     Add-ADGroupMember -Identity "All-Staff" -Members "John.Smith" | Out-Null
+}
+
+#Wait for GW01 to respond to PowerShell Direct
+Write-Host "Wait for GW01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
+while ((Invoke-Command -VMName GW01 -Credential $localcred {"Test"} -ea SilentlyContinue) -ne "Test") {
+    Write-Host "Still waiting..." -ForegroundColor Green -BackgroundColor Black
+    Start-Sleep -Seconds 5
+}
+
+#GW01 configure networking and domain join
+Write-Host "GW01 Networking and domain join" -ForegroundColor Green -BackgroundColor Black
+Invoke-Command -Credential $localcred -VMName GW01 -ScriptBlock {
+    #Disable IPV6
+    Write-Host "Disable IPV6" -ForegroundColor Blue -BackgroundColor Black
+    Get-NetAdapterBinding | Where-Object ComponentID -eq 'ms_tcpip6' | Disable-NetAdapterBinding | Out-Null
+
+    #Set IP Address (Change InterfaceIndex param if there's more than one NIC)
+    Write-Host "Set IP Address" -ForegroundColor Blue -BackgroundColor Black
+    $Params = @{
+        IPAddress = "192.168.10.1"
+        DefaultGateway = "192.168.10.1"
+        PrefixLength = "24"
+    }
+    Get-NetAdapter -Name "Internal" | New-NetIPAddress @Params | Out-Null
+
+    #Configure DNS Settings
+    Write-Host "Configure DNS" -ForegroundColor Blue -BackgroundColor Black
+    $Params = @{
+        ServerAddresses = "192.168.10.10"
+        InterfaceIndex = (Get-NetAdapter).InterfaceIndex
+    }
+    Set-DNSClientServerAddress @Params | Out-Null
+
+    #Domain join
+    Write-Host "Domain join and restart" -ForegroundColor Blue -BackgroundColor Black
+    $usr = "ad\Administrator"
+    $password = ConvertTo-SecureString "1Password" -AsPlainText -Force
+    $cred = new-object -typename System.Management.Automation.PSCredential -argumentlist $usr, $password
+    $Params = @{
+	    DomainName = "ad.contoso.com"
+	    OUPath = "OU=Servers,OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
+	    Credential = $cred
+	    Force = $true
+	    Restart = $true
+    }
+    Add-Computer @Params | Out-Null
 }
 
 #Wait for DHCP to respond to PowerShell Direct
@@ -1020,6 +1084,32 @@ Invoke-Command -Credential $localcred -VMName WEB01 -ScriptBlock {
 	    Restart = $true
     }
     Add-Computer @Params | Out-Null
+}
+
+#Wait for GW01 to respond to PowerShell Direct
+Write-Host "Wait for GW01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
+while ((Invoke-Command -VMName GW01 -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {
+    Write-Host "Still waiting..." -ForegroundColor Green -BackgroundColor Black
+    Start-Sleep -Seconds 5
+}
+
+#GW01 post-install
+Write-Host "GW01 post-install" -ForegroundColor Green -BackgroundColor Black
+Invoke-Command -Credential $domaincred -VMName GW01 -ScriptBlock {
+	Install-WindowsFeature Routing -IncludeManagementTools
+	
+	Install-RemoteAccess -VpnType RoutingOnly -PassThru
+
+	$ExternalInterface="External"
+	$InternalInterface="Internal"
+
+	cmd.exe /c "netsh routing ip nat install"
+	cmd.exe /c "netsh routing ip nat add interface $ExternalInterface"
+	cmd.exe /c "netsh routing ip nat set interface $ExternalInterface mode=full"
+	cmd.exe /c "netsh routing ip nat add interface $InternalInterface"
+	
+	Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\RemoteAccess\Parameters\IP' -Name InitialAddressPoolSize -Type DWORD -Value 0
+
 }
 
 #Wait for DHCP to respond to PowerShell Direct
