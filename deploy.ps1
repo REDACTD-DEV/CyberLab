@@ -961,7 +961,9 @@ Invoke-Command -Credential $localcred -VMName GW01 -ScriptBlock {
     }
     Get-NetAdapter -Name "Internal" | Set-DNSClientServerAddress @Params | Out-Null
 
-    Install-WindowsFeature Routing -IncludeManagementTools
+    #Install routing feature
+    Write-Host "Install routing feature" -ForegroundColor Blue -BackgroundColor Black
+    Install-WindowsFeature Routing -IncludeManagementTools | Out-Null
 
     #Domain join
     Write-Host "Domain join and restart" -ForegroundColor Blue -BackgroundColor Black
@@ -1134,17 +1136,21 @@ while ((Invoke-Command -VMName GW01 -Credential $domaincred {"Test"} -ea Silentl
 #GW01 post-install
 Write-Host "GW01 post-install" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -Credential $domaincred -VMName GW01 -ScriptBlock {	
-	Install-RemoteAccess -VpnType RoutingOnly -PassThru
+    #Install remote access
+    Write-Host "Install remote access" -ForegroundColor Blue -BackgroundColor Black
+	Install-RemoteAccess -VpnType RoutingOnly | Out-Null
 
+    #Configure remote access
+    Write-Host "Configure remote access" -ForegroundColor Blue -BackgroundColor Black
 	$ExternalInterface="External"
 	$InternalInterface="Internal"
 
-	cmd.exe /c "netsh routing ip nat install"
-	cmd.exe /c "netsh routing ip nat add interface $ExternalInterface"
-	cmd.exe /c "netsh routing ip nat set interface $ExternalInterface mode=full"
-	cmd.exe /c "netsh routing ip nat add interface $InternalInterface"
+	cmd.exe /c "netsh routing ip nat install" | Out-Null
+	cmd.exe /c "netsh routing ip nat add interface $ExternalInterface" | Out-Null
+	cmd.exe /c "netsh routing ip nat set interface $ExternalInterface mode=full" | Out-Null
+	cmd.exe /c "netsh routing ip nat add interface $InternalInterface" | Out-Null
 	
-	Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\RemoteAccess\Parameters\IP' -Name InitialAddressPoolSize -Type DWORD -Value 0
+	Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\RemoteAccess\Parameters\IP' -Name InitialAddressPoolSize -Type DWORD -Value 0 | Out-Null
 
 }
 
@@ -1399,7 +1405,7 @@ Invoke-Command -Credential $localcred -VMName CL01 -ScriptBlock {
     
     #Install RSAT
     Write-Host "Install RSAT" -ForegroundColor Blue -BackgroundColor Black
-    Get-WindowsCapability -Name RSAT* -Online | Add-WindowsCapability -Online
+    Get-WindowsCapability -Name RSAT* -Online | Add-WindowsCapability -Online | Out-Null
 
     #Domain join and restart
     Write-Host "Domain join and restart" -ForegroundColor Blue -BackgroundColor Black
@@ -1488,7 +1494,7 @@ Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
     IPv4DefaultGateway  =   "192.168.10.1"
     IPv4DNSResolver     =   "192.168.10.10"
     }
-    New-ADDCCloneConfigFile @Params | Out-Null
+    New-ADDCCloneConfigFile @Params -ea SilentlyContinue | Out-Null
 
     #Check the config file was created
     while ((Test-Path -Path C:\Windows\NTDS\DCCloneConfig.xml) -eq $false) {
