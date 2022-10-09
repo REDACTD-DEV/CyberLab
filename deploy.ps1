@@ -1258,6 +1258,10 @@ Invoke-Command -Credential $localcred -VMName CL01 -ScriptBlock {
     Write-Host "Get a new DHCP lease" -ForegroundColor Blue -BackgroundColor Black
     ipconfig /release | Out-Null
     ipconfig /renew | Out-Null
+    
+    #Install RSAT
+    Write-Host "Install RSAT" -ForegroundColor Blue -BackgroundColor Black
+    Get-WindowsCapability -Name RSAT* -Online | Add-WindowsCapability -Online
 
     #Domain join and restart
     Write-Host "Domain join and restart" -ForegroundColor Blue -BackgroundColor Black
