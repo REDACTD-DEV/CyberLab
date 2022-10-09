@@ -800,6 +800,10 @@ Invoke-Command -VMName DC01 -Credential $localcred -ScriptBlock {
         InterfaceIndex = (Get-NetAdapter).InterfaceIndex
     }
     Set-DNSClientServerAddress @Params | Out-Null
+    
+    #Install BitLocker
+    Write-Host "Install BitLocker" -ForegroundColor Blue -BackgroundColor Black
+    Install-WindowsFeature BitLocker -IncludeAllSubFeature -IncludeManagementTools | Out-Null
 
     #Install AD DS server role
     Write-Host "Install AD DS Server Role" -ForegroundColor Blue -BackgroundColor Black
