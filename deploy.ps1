@@ -651,18 +651,18 @@ function New-CustomVM {
         #Add Network Adapter
         Write-Host "Add Network Adapter for $VMName" -ForegroundColor Magenta -BackgroundColor Black	
 	$Params = @{
-            Name = $VMName
+            VMName = $VMName
             SwitchName = "ExternalLabSwitch"
             Name = "External"
         }
-	if($VMName -eq "GW01") {Add-VMNetworkAdapter @Params}
+	if($VMName -eq "GW01") {Add-VMNetworkAdapter @Params} | Out-Null
 	
 	$Params = @{
-            Name = $VMName
+            VMName = $VMName
             SwitchName = "PrivateLabSwitch"
             Name = "Internal"
         }
-	Add-VMNetworkAdapter @Params
+	Add-VMNetworkAdapter @Params | Out-Null
 
         #Specify CPU settings
         Write-Host "Running Set-VMProcessor for $VMName" -ForegroundColor Magenta -BackgroundColor Black
@@ -676,6 +676,7 @@ function New-CustomVM {
 	
 	#Configure vTPM
 	Write-Host "Configure vTPM for $VMName" -ForegroundColor Magenta -BackgroundColor Black
+	Set-VMKeyProtector -VMName $VMName -NewLocalKeyProtector | Out-Null
 	Enable-VMTPM -VMName $VMName | Out-Null
 	
         #Add Installer ISO
