@@ -833,13 +833,13 @@ Invoke-Command -VMName DC01 -Credential $localcred -ScriptBlock {
     }
     Get-NetAdapter -Name "Internal" | Set-DNSClientServerAddress @Params | Out-Null
     
-    #Install BitLocker
-    #Write-Host "Install BitLocker" -ForegroundColor Blue -BackgroundColor Black
-    #Install-WindowsFeature BitLocker -IncludeAllSubFeature -IncludeManagementTools | Out-Null
+    
 
     #Install AD DS server role
     Write-Host "Install AD DS Server Role" -ForegroundColor Blue -BackgroundColor Black
     Install-WindowsFeature -name AD-Domain-Services -IncludeManagementTools | Out-Null
+
+    
 
     #Configure server as a domain controller
     Write-Host "Configure server as a domain controller" -ForegroundColor Blue -BackgroundColor Black
@@ -961,6 +961,8 @@ Invoke-Command -Credential $localcred -VMName GW01 -ScriptBlock {
     }
     Get-NetAdapter -Name "Internal" | Set-DNSClientServerAddress @Params | Out-Null
 
+    
+
     #Install routing feature
     Write-Host "Install routing feature" -ForegroundColor Blue -BackgroundColor Black
     Install-WindowsFeature Routing -IncludeManagementTools | Out-Null
@@ -1016,6 +1018,8 @@ Invoke-Command -Credential $localcred -VMName DHCP -ScriptBlock {
     }
     Get-NetAdapter -Name "Internal" | Set-DNSClientServerAddress @Params | Out-Null
 
+    
+
     #Domain join
     Write-Host "Domain join and restart" -ForegroundColor Blue -BackgroundColor Black
     $usr = "ad\Administrator"
@@ -1067,6 +1071,8 @@ Invoke-Command -Credential $localcred -VMName FS01 -ScriptBlock {
     }
     Get-NetAdapter -Name "Internal" | Set-DNSClientServerAddress @Params | Out-Null
 
+    
+
     #Domain Join
     Write-Host "Domain Join" -ForegroundColor Blue -BackgroundColor Black
     $usr = "ad\Administrator"
@@ -1103,6 +1109,8 @@ Invoke-Command -Credential $localcred -VMName WEB01 -ScriptBlock {
         PrefixLength = "24"
     }
     Get-NetAdapter -Name "Internal" | New-NetIPAddress @Params | Out-Null
+
+    
 
     #Configure DNS Settings
     Write-Host "Configure DNS" -ForegroundColor Blue -BackgroundColor Black
@@ -1245,21 +1253,6 @@ Invoke-Command -Credential $domaincred -VMName FS01 -ScriptBlock {
     New-DfsnRoot -TargetPath "\\fs01.ad.contoso.com\NetworkShare" -Type DomainV2 -Path "\\ad.contoso.com\NetworkShare" | Out-Null
 }
 
-#Wait for WEB01 to respond to PowerShell Direct
-Write-Host "Wait for WEB01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((Invoke-Command -VMName WEB01 -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {
-    Write-Host "Still waiting..." -ForegroundColor Green -BackgroundColor Black
-    Start-Sleep -Seconds 5
-}
-
-#WEB01 post-install
-Write-Host "WEB01 post-install" -ForegroundColor Green -BackgroundColor Black
-Invoke-Command -Credential $domaincred -VMName WEB01 -ScriptBlock {
-    #Install IIS role
-    Write-Host "Install IIS role" -ForegroundColor Blue -BackgroundColor Black
-    Install-WindowsFeature -name "Web-Server" -IncludeAllSubFeature -IncludeManagementTools
-}
-
 #Wait for DC01 to respond to PowerShell Direct
 Write-Host "Wait for DC01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
 while ((Invoke-Command -VMName DC01 -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {
@@ -1267,8 +1260,16 @@ while ((Invoke-Command -VMName DC01 -Credential $domaincred {"Test"} -ea Silentl
     Start-Sleep -Seconds 5
 }
 
-#Group policy configuration
-Write-Host "Group policy configuration" -ForegroundColor Green -BackgroundColor Black
+Invoke-Command -VMName DC01 -Credential $domaincred -ScriptBlock {
+    while ((Get-Process | Where-Object ProcessName -eq "LogonUI") -ne $null) {
+        Start-Sleep 5
+        Write-Host "LogonUI still processing..." -ForegroundColor Green -BackgroundColor Black
+    }
+Write-host "LogonUI is down! Server is good to go!" -ForegroundColor Green -BackgroundColor Black
+}
+
+#DC01 postinstall script
+Write-Host "DC01 postinstall script" -ForegroundColor Green -BackgroundColor Black
 Invoke-Command -Credential $domaincred -VMName DC01 -ScriptBlock {
     Write-Host "Creating drive mapping GPO" -ForegroundColor Blue -BackgroundColor Black
     #Create GPO
@@ -1331,7 +1332,7 @@ $data = @"
     #BitLocker Group Policy Configuration
     Write-Host "Creating BitLocker GPO" -ForegroundColor Blue -BackgroundColor Black
     $gpoOuObj=new-gpo -name "BitLocker"
-    new-gplink -Guid $gpoOuObj.Id.Guid -target "OU=Workstations,OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
+    new-gplink -Guid $gpoOuObj.Id.Guid -target "DC=ad,DC=contoso,DC=com"
     set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "ActiveDirectoryBackup" -Value 1
     set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "ActiveDirectoryInfoToStore" -Value 1
     set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "OSActiveDirectoryBackup" -Value 1
@@ -1344,6 +1345,30 @@ $data = @"
     set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "OSRecoveryPassword" -Value 2
     set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "OSRequireActiveDirectoryBackup" -Value 1
     set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "RequireActiveDirectoryBackup" -Value 1
+    set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "FDVActiveDirectoryBackup" -Value 1
+    set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "FDVActiveDirectoryInfoToStore" -Value 1
+    set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "FDVEncryptionType" -Value 2
+    set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "FDVHideRecoveryPage" -Value 0
+    set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "FDVManageDRA" -Value 1
+    set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "FDVRecovery" -Value 1
+    set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "FDVRecoveryKey" -Value 2
+    set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "FDVRecoveryPassword" -Value 2
+    set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "FDVRequireActiveDirectoryBackup" -Value 1
+}
+
+#Wait for WEB01 to respond to PowerShell Direct
+Write-Host "Wait for WEB01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
+while ((Invoke-Command -VMName WEB01 -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {
+    Write-Host "Still waiting..." -ForegroundColor Green -BackgroundColor Black
+    Start-Sleep -Seconds 5
+}
+
+#WEB01 post-install
+Write-Host "WEB01 post-install" -ForegroundColor Green -BackgroundColor Black
+Invoke-Command -Credential $domaincred -VMName WEB01 -ScriptBlock {
+    #Install IIS role
+    Write-Host "Install IIS role" -ForegroundColor Blue -BackgroundColor Black
+    Install-WindowsFeature -name "Web-Server" -IncludeAllSubFeature -IncludeManagementTools
 }
 
 #Wait for DC02 to respond to PowerShell Direct
@@ -1593,19 +1618,42 @@ Start-VM -Name "DC03" | Out-Null
 Write-Host "Cleanup export folder" -ForegroundColor Green -BackgroundColor Black
 Remove-Item -Recurse E:\Export\ | Out-Null
 
+#BitLocker requires DVD drives to be removed from VM
+Write-Host "Remove DVD drives from DC01" -ForegroundColor Green -BackgroundColor Black
+Get-VM | Get-VMDvdDrive | Set-VMDvdDrive -Path $null | Out-Null
 
-#Wait for CL01 to respond to PowerShell Direct
-Write-Host "Wait for CL01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
-while ((Invoke-Command -VMName CL01 -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {
-    Write-Host "Still waiting..." -ForegroundColor Green -BackgroundColor Black
-    Start-Sleep -Seconds 5
+#Make sure all the computers are up before we remote in and start encrypting
+$Computers = "DC01", "DC02", "DC03", "GW01", "DHCP", "FS01", "WEB01", "CL01"
+foreach ($Computer in $Computers) {
+    Write-Host "Wait for $Computer to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
+    while ((Invoke-Command -VMName $Computer -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {
+        Write-Host "Still waiting for $Computer..." -ForegroundColor Green -BackgroundColor Black
+        Start-Sleep -Seconds 5
+    }
+    Write-Host "$Computer is UP!" -ForegroundColor Green -BackgroundColor Black
 }
 
-#CL01 Networking and domain join
-Write-Host "CL01 Networking and domain join" -ForegroundColor Green -BackgroundColor Black
-Invoke-Command -Credential $domaincred -VMName CL01 -ScriptBlock {
-	gpupdate /force
-	#Eject all DVDs
-	Enable-BitLocker -MountPoint "C:" -RecoveryPasswordProtector -UsedSpaceOnly
-	Restart-Computer-Force
+$Computers = "DC01", "DC02", "DC03", "GW01", "DHCP", "FS01", "WEB01" #CL01 already has Bitlocker installed. Just the servers need this
+Invoke-Command -VMName $Computers -Credential $domaincred -ScriptBlock {
+    Enable-WindowsOptionalFeature -Online -FeatureName BitLocker -All -NoRestart
+    Restart-Computer 
+}
+
+#Make sure all the computers are up before we remote in and start encrypting
+$Computers = "DC01", "DC02", "DC03", "GW01", "DHCP", "FS01", "WEB01", "CL01"
+foreach ($Computer in $Computers) {
+    Write-Host "Wait for $Computer to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
+    while ((Invoke-Command -VMName $Computer -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {
+        Write-Host "Still waiting for $Computer..." -ForegroundColor Green -BackgroundColor Black
+        Start-Sleep -Seconds 5
+    }
+    Write-Host "$Computer is UP!" -ForegroundColor Green -BackgroundColor Black
+}
+
+Invoke-Command -VMName $Computers -Credential $domaincred -ScriptBlock {
+    gpupdate /force
+    Enable-BitLocker -MountPoint "C:" -RecoveryPasswordProtector -UsedSpaceOnly
+    if ($ENV:COMPUTERNAME -eq "FS01") {Enable-BitLocker -MountPoint "F:" -RecoveryPasswordProtector -UsedSpaceOnly}
+    Start-Sleep -Seconds 60
+    Restart-Computer -Force
 }
