@@ -1327,6 +1327,23 @@ $data = @"
         Value = 1
     }
     set-GPRegistryValue @Params | Out-Null
+    
+    #BitLocker Group Policy Configuration
+    Write-Host "Creating BitLocker GPO" -ForegroundColor Blue -BackgroundColor Black
+    $gpoOuObj=new-gpo -name "BitLocker"
+    new-gplink -Guid $gpoOuObj.Id.Guid -target "OU=Workstations,OU=Devices,OU=Contoso,DC=ad,DC=contoso,DC=com"
+    set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "ActiveDirectoryBackup" -Value 1
+    set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "ActiveDirectoryInfoToStore" -Value 1
+    set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "OSActiveDirectoryBackup" -Value 1
+    set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "OSActiveDirectoryInfoToStore" -Value 1
+    set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "OSEncryptionType" -Value 2
+    set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "OSHideRecoveryPage" -Value 0
+    set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "OSManageDRA" -Value 1
+    set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "OSRecovery" -Value 1
+    set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "OSRecoveryKey" -Value 2
+    set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "OSRecoveryPassword" -Value 2
+    set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "OSRequireActiveDirectoryBackup" -Value 1
+    set-GPRegistryValue -Name BitLocker -Key "HKLM\Software\Policies\Microsoft\FVE" -Type "DWORD" -ValueName "RequireActiveDirectoryBackup" -Value 1
 }
 
 #Wait for DC02 to respond to PowerShell Direct
@@ -1575,3 +1592,20 @@ Start-VM -Name "DC03" | Out-Null
 #Cleanup export folder
 Write-Host "Cleanup export folder" -ForegroundColor Green -BackgroundColor Black
 Remove-Item -Recurse E:\Export\ | Out-Null
+
+
+#Wait for CL01 to respond to PowerShell Direct
+Write-Host "Wait for CL01 to respond to PowerShell Direct" -ForegroundColor Green -BackgroundColor Black
+while ((Invoke-Command -VMName CL01 -Credential $domaincred {"Test"} -ea SilentlyContinue) -ne "Test") {
+    Write-Host "Still waiting..." -ForegroundColor Green -BackgroundColor Black
+    Start-Sleep -Seconds 5
+}
+
+#CL01 Networking and domain join
+Write-Host "CL01 Networking and domain join" -ForegroundColor Green -BackgroundColor Black
+Invoke-Command -Credential $domaincred -VMName CL01 -ScriptBlock {
+	gpupdate /force
+	#Eject all DVDs
+	Enable-BitLocker -MountPoint "C:" -RecoveryPasswordProtector -UsedSpaceOnly
+	Restart-Computer-Force
+}
